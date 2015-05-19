@@ -1,9 +1,8 @@
 package com.getswitchpal.android;
 
-import android.app.ActionBar;
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 
 import android.view.View;
 import android.widget.Toast;
@@ -17,10 +16,10 @@ import java.util.Collections;
 /**
  * The activity that is used when a user has not connect to a device.
  */
-public class ScanActivity extends Activity implements ZXingScannerView.ResultHandler {
+public class QRScanActivity extends Activity implements ZXingScannerView.ResultHandler {
     private ZXingScannerView mScannerView;
 
-    private final static String TAG = ScanActivity.class.getSimpleName();
+    private final static String TAG = QRScanActivity.class.getSimpleName();
 
     @Override
     public void onCreate(Bundle state) {
@@ -50,13 +49,29 @@ public class ScanActivity extends Activity implements ZXingScannerView.ResultHan
         mScannerView.stopCamera();           // Stop camera on pause
     }
 
+    /**
+     * Handle the QR code content
+     * @param rawResult
+     */
     @Override
     public void handleResult(Result rawResult) {
-        // Do something with the result here
-        //Log.v(TAG, rawResult.getText()); // Prints scan results
-        Toast.makeText(this, "Contents = " + rawResult.getText(), Toast.LENGTH_SHORT).show();
 
-        // MAC address 7A:F4:0F:D7:1D:5E
-        //
+        String url = rawResult.getText();
+        Utils.DeviceInfo deviceInfo = Utils.getDeviceInfoFromUrl(url);
+        if (deviceInfo != null) {
+
+            Toast.makeText(this,
+                    "address = " + deviceInfo.getAddress() + ", passkey = " + deviceInfo.getPasskey(),
+                    Toast.LENGTH_SHORT).show();
+
+            Intent intent = new Intent(QRScanActivity.this, DeviceActivity.class);
+            intent.putExtra(DeviceActivity.DEVICE_ADDRESS, deviceInfo.getAddress());
+            intent.putExtra(DeviceActivity.DEVICE_PASSKEY, deviceInfo.getPasskey());
+            QRScanActivity.this.startActivity(intent);
+        } else {
+            Toast.makeText(this, "Cannot parse device info from the QR code: " + rawResult.getText(), Toast.LENGTH_LONG)
+                    .show();
+            mScannerView.startCamera();
+        }
     }
 }

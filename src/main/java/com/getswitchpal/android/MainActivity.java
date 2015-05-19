@@ -29,7 +29,7 @@ public class MainActivity extends Activity {
         scanButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, ScanActivity.class);
+                Intent intent = new Intent(MainActivity.this, QRScanActivity.class);
                 MainActivity.this.startActivity(intent);
             }
         });

@@ -32,7 +32,7 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="com.getswitchpal.android.ScanActivity" />
+        <activity android:name=".QRScanActivity" />
         <activity android:name="com.getswitchpal.android.DeviceActivity" />
 
         <activity android:name="com.getswitchpal.android.DeviceControlActivity" />
