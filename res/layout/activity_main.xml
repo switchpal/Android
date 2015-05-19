@@ -1,20 +1,53 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
+<RelativeLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-    <LinearLayout style="@style/Widget.SampleMessageTile"
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:orientation="vertical">
+    <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/app_name"
+            android:id="@+id/textView"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="160dp"
+            android:layout_centerHorizontal="true"
+            />
 
-        <TextView style="@style/Widget.SampleMessage"
+    <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Scan"
+            android:id="@+id/button"
+            android:layout_below="@id/textView"
+            android:layout_centerHorizontal="true"
+            />
+
+    <TextView style="@style/Widget.SampleMessage"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:layout_marginLeft="@dimen/horizontal_page_margin"
+              android:layout_marginRight="@dimen/horizontal_page_margin"
+              android:layout_marginTop="@dimen/vertical_page_margin"
+              android:layout_marginBottom="@dimen/vertical_page_margin"
+              android:text="@string/intro_message"
+              android:textSize="13dp"
+              android:id="@+id/intro"
+              android:gravity="center_horizontal"
+              android:layout_below="@id/button"
+              android:layout_centerHorizontal="true"
+            />
+
+    <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="@dimen/horizontal_page_margin"
-            android:layout_marginRight="@dimen/horizontal_page_margin"
-            android:layout_marginTop="@dimen/vertical_page_margin"
-            android:layout_marginBottom="@dimen/vertical_page_margin"
-            android:text="@string/intro_message" />
-    </LinearLayout>
-</LinearLayout>
+            android:text="about"
+            android:textSize="16dp"
+            android:id="@+id/text_about"
+            android:gravity="center_horizontal"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="10dp"
+            />
+</RelativeLayout>

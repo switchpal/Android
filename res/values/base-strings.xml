@@ -4,8 +4,7 @@
     <string name="intro_message">
         <![CDATA[
 
-            This sample demonstrates how to use the Bluetooth LE Generic Attribute Profile (GATT)
-            to transmit arbitrary data between devices.
+        Get started by scan the QR code on your SwitchPal device.
 
         ]]>
     </string>
