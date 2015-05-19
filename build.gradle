@@ -1,13 +1,20 @@
+apply plugin: 'com.android.application'
+
 buildscript {
 	repositories {
 		mavenCentral()
 	}
 	dependencies {
-		classpath 'com.android.tools.build:gradle:1.1.1'
+        classpath 'com.android.tools.build:gradle:1.1.1'
 	}
 }
 
-apply plugin: 'com.android.application'
+dependencies {
+    repositories {
+        mavenCentral()
+    }
+    compile 'me.dm7.barcodescanner:zxing:1.7'
+}
 
 android {
 	compileSdkVersion 22

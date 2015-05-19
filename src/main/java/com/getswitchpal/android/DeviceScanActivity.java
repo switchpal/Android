@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -238,6 +239,7 @@ public class DeviceScanActivity extends ListActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    Log.d("XXX", "New device found" + device.getName() + device.getAddress());
                     mLeDeviceListAdapter.addDevice(device);
                     mLeDeviceListAdapter.notifyDataSetChanged();
                 }

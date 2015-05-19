@@ -2,7 +2,10 @@ package com.getswitchpal.android;
 
 import android.app.ActionBar;
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
 
 /**
  * The activity that is used when a user has not connect to a device.
@@ -21,5 +24,23 @@ public class MainActivity extends Activity {
             actionBar.hide();
         }
 
+        // get hold on the scan button
+        final Button scanButton = (Button) findViewById(R.id.button_scan);
+        scanButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, ScanActivity.class);
+                MainActivity.this.startActivity(intent);
+            }
+        });
+
+        final Button debugButton = (Button) findViewById(R.id.text_debug);
+        debugButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, DeviceActivity.class);
+                MainActivity.this.startActivity(intent);
+            }
+        });
     }
 }

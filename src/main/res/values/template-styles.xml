@@ -2,10 +2,13 @@
 
     <!-- Activity themes -->
 
-    <style name="Theme.Base" parent="android:Theme.Holo.Light" />
+    <style name="Theme.Base" parent="android:Theme.Holo.Light">
+        <item name="android:windowActionBarOverlay">true</item>
+    </style>
 
     <style name="Theme.Sample" parent="Theme.Base" />
 
+    <!-- applied globally -->
     <style name="AppTheme" parent="Theme.Sample" />
     <!-- Widget styling -->
 
