@@ -65,8 +65,8 @@ public class QRScanActivity extends Activity implements ZXingScannerView.ResultH
                     Toast.LENGTH_SHORT).show();
 
             Intent intent = new Intent(QRScanActivity.this, DeviceActivity.class);
-            intent.putExtra(DeviceActivity.DEVICE_ADDRESS, deviceInfo.getAddress());
-            intent.putExtra(DeviceActivity.DEVICE_PASSKEY, deviceInfo.getPasskey());
+            intent.putExtra(DeviceActivity.EXTRAS_DEVICE_ADDRESS, deviceInfo.getAddress());
+            intent.putExtra(DeviceActivity.EXTRAS_DEVICE_PASSKEY, deviceInfo.getPasskey());
             QRScanActivity.this.startActivity(intent);
         } else {
             Toast.makeText(this, "Cannot parse device info from the QR code: " + rawResult.getText(), Toast.LENGTH_LONG)

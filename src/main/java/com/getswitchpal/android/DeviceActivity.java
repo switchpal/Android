@@ -2,6 +2,7 @@ package com.getswitchpal.android;
 
 import android.app.ActionBar;
 import android.app.Activity;
+import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -12,19 +13,18 @@ import android.util.Base64;
 import android.util.Log;
 import android.util.Pair;
 import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.widget.*;
 
+import java.util.ArrayList;
 import java.util.Locale;
 
 /**
  * The activity that is used when a user has not connect to a device.
  */
-public class DeviceActivity extends Activity {
+public class DeviceActivity extends Activity implements NumberPicker.OnValueChangeListener {
 
-    public static final String DEVICE_ADDRESS = "address";
-    public static final String DEVICE_PASSKEY = "passkey";
+    public static final String EXTRAS_DEVICE_ADDRESS = "address";
+    public static final String EXTRAS_DEVICE_PASSKEY = "passkey";
 
     private BluetoothAdapter mBluetoothAdapter;
 
@@ -32,6 +32,9 @@ public class DeviceActivity extends Activity {
     private String mDeviceAddress;
     private String mDevicePasskey;
     private BluetoothDevice mDevice;
+
+    // double back to exit
+    private boolean doubleBackToExitPressedOnce = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -49,8 +52,8 @@ public class DeviceActivity extends Activity {
         // get device info from the intent
         Bundle extras = getIntent().getExtras();
         if (extras != null) {
-            mDeviceAddress = extras.getString(DEVICE_ADDRESS);
-            mDevicePasskey = extras.getString(DEVICE_PASSKEY);
+            mDeviceAddress = extras.getString(EXTRAS_DEVICE_ADDRESS);
+            mDevicePasskey = extras.getString(EXTRAS_DEVICE_PASSKEY);
         }
 
         if (mDeviceAddress == null) {
@@ -73,6 +76,14 @@ public class DeviceActivity extends Activity {
         final BluetoothManager bluetoothManager =
                 (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         mBluetoothAdapter = bluetoothManager.getAdapter();
+
+        final LinearLayout rangeGroup = (LinearLayout) findViewById(R.id.group_range);
+        rangeGroup.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showRangeConfigDialog();
+            }
+        });
     }
 
     /**
@@ -85,6 +96,54 @@ public class DeviceActivity extends Activity {
         } else {
             Toast.makeText(DeviceActivity.this, "Error happens!", Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void showRangeConfigDialog() {
+        final Dialog dialog = new Dialog(DeviceActivity.this);
+        dialog.setTitle("Temperature Range:");
+        dialog.setContentView(R.layout.dialog_temperature);
+
+        // the values that can be selected by user, between 24 to 30
+        ArrayList<String> values = new ArrayList<>();
+        for (float temp = 24; temp < 30.1; temp += 0.1) {
+            values.add(String.format("%2.1f", temp));
+        }
+        String[] displayedValues = values.toArray(new String[values.size()]);
+
+        // setup min temperature
+        final NumberPicker minTempPicker = (NumberPicker) dialog.findViewById(R.id.picker_temp_min);
+        minTempPicker.setDisplayedValues(displayedValues);
+        minTempPicker.setMaxValue(displayedValues.length - 1);
+        minTempPicker.setMinValue(0);
+        minTempPicker.setValue(40);
+        minTempPicker.setWrapSelectorWheel(false);
+        minTempPicker.setOnValueChangedListener(DeviceActivity.this);
+        
+        final NumberPicker maxTempPicker = (NumberPicker) dialog.findViewById(R.id.picker_temp_max);
+        maxTempPicker.setDisplayedValues(displayedValues);
+        maxTempPicker.setMaxValue(displayedValues.length - 1);
+        maxTempPicker.setMinValue(0);
+        maxTempPicker.setValue(40);
+        maxTempPicker.setWrapSelectorWheel(false);
+        maxTempPicker.setOnValueChangedListener(DeviceActivity.this);
+
+        // setup button
+        Button confirmButton = (Button) dialog.findViewById(R.id.button_confirm);
+        Button cancelButton = (Button) dialog.findViewById(R.id.button_cancel);
+        confirmButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //tv.setText(String.valueOf(np.getValue())); //set the value to textview
+                dialog.dismiss();
+            }
+        });
+        cancelButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss(); // dismiss the dialog
+            }
+        });
+        dialog.show();
     }
 
     /**
@@ -120,4 +179,31 @@ public class DeviceActivity extends Activity {
     private void setSwitchState(boolean state) {
     }
 
+    /**
+     * Double back to exit the app
+     */
+    @Override
+    public void onBackPressed() {
+        //super.onBackPressed();
+        if (doubleBackToExitPressedOnce) {
+            super.onBackPressed();
+            return;
+        }
+
+        this.doubleBackToExitPressedOnce = true;
+        Toast.makeText(this, "Please click BACK again to exit", Toast.LENGTH_SHORT).show();
+
+        new Handler().postDelayed(new Runnable() {
+
+            @Override
+            public void run() {
+                doubleBackToExitPressedOnce=false;
+            }
+        }, 2000);
+    }
+
+    @Override
+    public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
+
+    }
 }

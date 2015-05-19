@@ -7,17 +7,109 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:text="MAC address"
-        android:id="@+id/text_mac"
-        android:layout_centerHorizontal="true" />
+        android:text="@string/app_name"
+        android:id="@+id/text_app_name"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="10dp"
+        android:textSize="16dp" />
 
-    <TextView
-        android:layout_width="wrap_content"
+    <!-- BIG current temperature display -->
+    <RelativeLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:text="MAC address"
-        android:id="@+id/text_device_address"
-        android:layout_centerHorizontal="true" />
+        android:layout_below="@id/text_app_name"
+        android:layout_marginTop="60dp"
+        android:layout_marginBottom="40dp"
+        android:id="@+id/group_temperature"
+        >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="28"
+            android:id="@+id/text_temperature"
+            android:layout_centerHorizontal="true"
+            android:textSize="108dp"
+            />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="°C"
+            android:layout_toRightOf="@id/text_temperature"
+            android:layout_alignBaseline="@+id/text_temperature"
+            android:textSize="24dp" />
+    </RelativeLayout>
+
+
+    <!-- wrapper for two buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_below="@id/group_temperature"
+        android:gravity="center_horizontal"
+        android:id="@+id/group_button"
+        >
+        <!-- switch state toggle -->
+        <ToggleButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="16dp"
+            android:id="@+id/button_switch"
+            android:layout_marginBottom="30dp"
+            android:textOn="On"
+            android:textOff="Off" />
+
+        <ToggleButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="16dp"
+            android:id="@+id/button_mode"
+            android:layout_marginBottom="30dp"
+            android:checked="true"
+            android:textOff="Manual"
+            android:textOn="Auto"
+            android:enabled="true" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/group_button"
+        android:gravity="center_horizontal"
+        android:id="@+id/group_range"
+        >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="26°C"
+            android:id="@+id/text_temperature_min"
+            />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="/"
+            android:id="@+id/text_temperature_separator"
+            />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="28°C"
+            android:id="@+id/text_temperature_max"
+            />
+
+
+    </LinearLayout>
 
     <Button
         android:layout_width="wrap_content"
@@ -28,5 +120,16 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="30dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:text="00:11:22:33:44:55"
+        android:id="@+id/text_device_address"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/button_connect"
+        android:textColor="#BBBBBB"
+        android:textSize="12dp" />
 
 </RelativeLayout>
