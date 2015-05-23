@@ -16,6 +16,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Service for managing connection and data communication with a GATT server hosted on a
@@ -199,7 +200,7 @@ public class BluetoothLeService extends Service {
 
         final BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
         if (device == null) {
-            Log.w(TAG, "Device not found.  Unable to connect.");
+            Log.w(TAG, "Device not found. Unable to connect.");
             return false;
         }
         // We want to directly connect to the device, so we are setting the autoConnect
@@ -278,5 +279,13 @@ public class BluetoothLeService extends Service {
         if (mBluetoothGatt == null) return null;
 
         return mBluetoothGatt.getServices();
+    }
+
+    public BluetoothGattCharacteristic getCharacteristic(String uuid) {
+        return mBluetoothGatt.getService(UUID.fromString(SwitchPal.UUID_SERVICE)).getCharacteristic(UUID.fromString(uuid));
+    }
+
+    public BluetoothGatt getmBluetoothGatt() {
+        return mBluetoothGatt;
     }
 }

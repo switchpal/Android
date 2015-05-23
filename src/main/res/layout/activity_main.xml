@@ -20,7 +20,7 @@
         android:text="Scan"
         android:id="@+id/button_scan"
         android:layout_below="@id/textView"
-        android:layout_centerHorizontal="true" />
+        android:layout_centerHorizontal="true"/>
 
     <TextView
         style="@style/Widget.SampleMessage"

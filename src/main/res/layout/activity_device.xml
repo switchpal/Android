@@ -61,7 +61,7 @@
             android:id="@+id/button_switch"
             android:layout_marginBottom="30dp"
             android:textOn="On"
-            android:textOff="Off" />
+            android:textOff="Off" android:checked="false"/>
 
         <ToggleButton
             android:layout_width="wrap_content"
