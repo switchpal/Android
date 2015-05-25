@@ -35,10 +35,6 @@
         <activity android:name=".QRScanActivity" />
         <activity android:name=".DeviceActivity" />
 
-        <service
-            android:name=".BluetoothLeService"
-            android:enabled="true" />
-
     </application>
 
 </manifest>

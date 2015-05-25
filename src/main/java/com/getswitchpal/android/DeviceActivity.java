@@ -7,27 +7,30 @@ import android.bluetooth.*;
 import android.content.*;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.widget.*;
 
 import java.util.ArrayList;
+import java.util.UUID;
 
 /**
  * The activity that is used when a user has not connect to a device.
  */
 public class DeviceActivity extends Activity implements NumberPicker.OnValueChangeListener {
 
+    private static final int REQUEST_ENABLE_BLUETOOTH = 1;
     private final static String TAG = DeviceActivity.class.getSimpleName();
 
     public static final String EXTRAS_DEVICE_ADDRESS = "address";
     public static final String EXTRAS_DEVICE_PASSKEY = "passkey";
 
 
-    private BluetoothLeService mBluetoothLeService;
     private TextView mConnectionState;
     private boolean mConnected = false;
+
+    private BluetoothAdapter mBluetoothAdapter;
+    private BluetoothGatt mBluetoothGatt;
 
     // the device
     private Device mDevice;
@@ -42,115 +45,6 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     // double back to exit
     private boolean doubleBackToExitPressedOnce = false;
 
-
-    // Code to manage Service lifecycle.
-    private final ServiceConnection mServiceConnection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder service) {
-            mBluetoothLeService = ((BluetoothLeService.LocalBinder) service).getService();
-            mBluetoothLeService.initialize();
-            if (!mBluetoothLeService.initialize()) {
-                Log.e(TAG, "Unable to initialize Bluetooth");
-                finish();
-            }
-            // Automatically connects to the device upon successful start-up initialization.
-            mBluetoothLeService.connect(mDevice.getAddress());
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            mBluetoothLeService = null;
-        }
-    };
-
-    // Handles various events fired by the Service.
-    // ACTION_GATT_CONNECTED: connected to a GATT server.
-    // ACTION_GATT_DISCONNECTED: disconnected from a GATT server.
-    // ACTION_GATT_SERVICES_DISCOVERED: discovered GATT services.
-    // ACTION_DATA_AVAILABLE: received data from the device.  This can be a result of read
-    //                        or notification operations.
-    private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            final String action = intent.getAction();
-            if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
-                Log.i("ON GATT CONNECTED 1", "OK");
-                mConnected = true;
-                updateConnectionState(R.string.connected);
-                invalidateOptionsMenu();
-                Log.i("ON GATT CONNECTED 2", "OK");
-            } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
-                mConnected = false;
-                updateConnectionState(R.string.disconnected);
-                invalidateOptionsMenu();
-                //clearUI();
-                Log.i("ON GATT DISCONNECTED", "OK");
-            } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
-                // Show all the supported services and characteristics on the user interface.
-                Log.i("ON GATT SERVICE DISCOVERED", "OK");
-                //displayGattServices(mBluetoothLeService.getSupportedGattServices());
-                Log.i("ON DISPLAYED SERVICES", "OK");
-            } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-                Log.i("ON GATT DATA AVAILABLE", "OK");
-                //Log.i(TAG, intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA));
-                byte[] data = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
-                String uuid = intent.getStringExtra(BluetoothLeService.EXTRA_UUID);
-                switch (uuid) {
-                    case SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE:
-                        mDevice.setSwitchState(data);
-                        Log.i(TAG, "Switch State is:" + mDevice.getSwitchState());
-                        break;
-                    case SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE:
-                        mDevice.setControlMode(data);
-                        Log.i(TAG, "Control Mode is:" + mDevice.getControlMode());
-                        break;
-                    case SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE:
-                        mDevice.setTemperature(data);
-                        Log.i(TAG, "Temperature is: " + mDevice.getTemperature());
-                        break;
-                    case SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE:
-                        mDevice.setTemperatureRange(data);
-                        Log.i(TAG, "Temperature Range: min=" + mDevice.getTemperatureRangeMin() + ", max=" +mDevice.getTemperatureRangeMax());
-                        break;
-                    default:
-                        Log.i(TAG, "unknown UUID: " + uuid);
-                }
-               updateView();
-            } else if (BluetoothLeService.ACTION_DATA_WRITTEN.equals(action)) {
-                byte[] data = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
-                String uuid = intent.getStringExtra(BluetoothLeService.EXTRA_UUID);
-
-                Log.i(TAG, "data written intent:" + uuid);
-                switch (uuid) {
-                    case SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE:
-                        mDevice.setSwitchState(data);
-                        Log.i(TAG, "Switch State is:" + mDevice.getSwitchState());
-                        break;
-                    case SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE:
-                        mDevice.setControlMode(data);
-                        Log.i(TAG, "Control Mode is:" + mDevice.getControlMode());
-                        break;
-                    case SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE:
-                        mDevice.setTemperatureRange(data);
-                        Log.i(TAG, "Temperature Range: min=" + mDevice.getTemperatureRangeMin() + ", max=" +mDevice.getTemperatureRangeMax());
-                        break;
-                    default:
-                        Log.i(TAG, "unknown UUID: " + uuid);
-                }
-                updateView();
-            }
-        }
-    };
-
-    private void updateConnectionState(final int resourceId) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                //mConnectionState.setText(resourceId);
-            }
-        });
-    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -226,34 +120,171 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
 
         mConnectionState = (TextView) findViewById(R.id.connection_state);
 
-        // Bind our Bluetooth service
-        Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
-        bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
+        // For API level 18 and above, get a reference to BluetoothAdapter through
+        // BluetoothManager.
+        BluetoothManager mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        if (mBluetoothManager == null) {
+            Log.e(TAG, "Unable to initialize BluetoothManager.");
+            // TODO
+            finish();
+            return;
+        }
+
+        mBluetoothAdapter = mBluetoothManager.getAdapter();
+        if (mBluetoothAdapter == null) {
+            Log.e(TAG, "Unable to obtain a BluetoothAdapter.");
+            // TODO
+            finish();
+        }
+
+        // check if Bluetooth is enabled
+        if (!mBluetoothAdapter.isEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BLUETOOTH);
+        }
+    }
+
+    // Implements callback methods for GATT events that the app cares about.  For example,
+    // connection change and services discovered.
+    private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
+        @Override
+        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+            String intentAction;
+            if (newState == BluetoothProfile.STATE_CONNECTED) {
+                Log.i("STATE CONNECTED", "OK");
+                // Attempts to discover services after successful connection.
+                mBluetoothGatt.discoverServices();
+                Log.i("AFTER DISCOVER SERVICES", "OK");
+
+            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                Log.i("STATE DISCONNECTED", "OK");
+                Log.i(TAG, "Disconnected from GATT server.");
+            }
+        }
+
+        @Override
+        public void onCharacteristicRead(BluetoothGatt gatt,
+                                         BluetoothGattCharacteristic characteristic,
+                                         int status) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                byte[] data = characteristic.getValue();
+                String uuid = characteristic.getUuid().toString();
+                switch (uuid) {
+                    case SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE:
+                        mDevice.setSwitchState(data);
+                        Log.i(TAG, "Switch State is:" + mDevice.getSwitchState());
+                        break;
+                    case SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE:
+                        mDevice.setControlMode(data);
+                        Log.i(TAG, "Control Mode is:" + mDevice.getControlMode());
+                        break;
+                    case SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE:
+                        mDevice.setTemperature(data);
+                        Log.i(TAG, "Temperature is: " + mDevice.getTemperature());
+                        break;
+                    case SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE:
+                        mDevice.setTemperatureRange(data);
+                        Log.i(TAG, "Temperature Range: min=" + mDevice.getTemperatureRangeMin() + ", max=" + mDevice.getTemperatureRangeMax());
+                        break;
+                    default:
+                        Log.i(TAG, "unknown UUID: " + uuid);
+                }
+                updateView();
+            }
+        }
+
+        @Override
+        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                byte[] data = characteristic.getValue();
+                String uuid = characteristic.getUuid().toString();
+
+                Log.i(TAG, "data written intent:" + uuid);
+                switch (uuid) {
+                    case SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE:
+                        mDevice.setSwitchState(data);
+                        Log.i(TAG, "Switch State is:" + mDevice.getSwitchState());
+                        break;
+                    case SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE:
+                        mDevice.setControlMode(data);
+                        Log.i(TAG, "Control Mode is:" + mDevice.getControlMode());
+                        break;
+                    case SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE:
+                        mDevice.setTemperatureRange(data);
+                        Log.i(TAG, "Temperature Range: min=" + mDevice.getTemperatureRangeMin() + ", max=" + mDevice.getTemperatureRangeMax());
+                        break;
+                    default:
+                        Log.i(TAG, "unknown UUID: " + uuid);
+                }
+                updateView();
+            }
+        }
+
+        @Override
+        public void onCharacteristicChanged(BluetoothGatt gatt,
+                                            BluetoothGattCharacteristic characteristic) {
+        }
+    };
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_ENABLE_BLUETOOTH) {
+            Log.i(TAG, "bluetooth request to enable, resultCode=" +resultCode);
+            //bindBluetoothService();
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
-        if (mBluetoothLeService != null) {
-            final boolean result = mBluetoothLeService.connect(mDevice.getAddress());
-            Log.d(TAG, "Connect request result=" + result);
+        //requestAllDeviceInfo();
 
-            requestAllDeviceInfo();
+        BluetoothManager mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        if (mBluetoothManager == null) {
+            Log.e(TAG, "Unable to initialize BluetoothManager.");
+            // TODO
+            finish();
+            return;
+        }
+
+        mBluetoothAdapter = mBluetoothManager.getAdapter();
+        if (mBluetoothAdapter == null) {
+            Log.e(TAG, "Unable to obtain a BluetoothAdapter.");
+            // TODO
+            finish();
+        }
+
+        if (mBluetoothGatt == null) {
+            final BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(mDevice.getAddress());
+            if (device == null) {
+                Log.w(TAG, "Device not found. Unable to connect.");
+                return;
+            }
+            // We want to directly connect to the device, so we are setting the autoConnect
+            // parameter to false.
+            mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
+            Log.d(TAG, "connect to device");
         }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        unregisterReceiver(mGattUpdateReceiver);
+
+        if (mBluetoothGatt != null) {
+            mBluetoothGatt.close();
+            mBluetoothGatt = null;
+        }
+
+        if (mBluetoothAdapter != null) {
+            mBluetoothAdapter = null;
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unbindService(mServiceConnection);
-        mBluetoothLeService = null;
+
     }
 
     /**
@@ -274,16 +305,21 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
      * - control mode
      */
     private void updateView() {
-        mTemperatureView.setText(String.format("%.1f", mDevice.getTemperature()));
-        mTemperatureRangeMinView.setText(String.format("%.1f", mDevice.getTemperatureRangeMin()));
-        mTemperatureRangeMaxView.setText(String.format("%.1f", mDevice.getTemperatureRangeMax()));
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mTemperatureView.setText(String.format("%.1f", mDevice.getTemperature()));
+                mTemperatureRangeMinView.setText(String.format("%.1f", mDevice.getTemperatureRangeMin()));
+                mTemperatureRangeMaxView.setText(String.format("%.1f", mDevice.getTemperatureRangeMax()));
 
-        if (mDevice.getSwitchState().isValid()) {
-            mSwitchStateToggle.setChecked(mDevice.getSwitchState().toBoolean());
-        }
-        if (mDevice.getControlMode().isValid()) {
-            mControlModeToggle.setChecked(mDevice.getControlMode().toBoolean());
-        }
+                if (mDevice.getSwitchState().isValid()) {
+                    mSwitchStateToggle.setChecked(mDevice.getSwitchState().toBoolean());
+                }
+                if (mDevice.getControlMode().isValid()) {
+                    mControlModeToggle.setChecked(mDevice.getControlMode().toBoolean());
+                }
+            }
+        });
     }
 
     private void showRangeConfigDialog() {
@@ -334,22 +370,45 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
         dialog.show();
     }
 
+    private BluetoothGattCharacteristic getCharacteristic(String uuid) {
+        return mBluetoothGatt.getService(UUID.fromString(SwitchPal.UUID_SERVICE)).getCharacteristic(UUID.fromString(uuid));
+    }
+
+    private void requestReadCharacteristic(String uuid) {
+
+        if (mBluetoothGatt == null) {
+            Log.e(TAG, "mBluetoothGatt is nul");
+            return;
+        }
+
+        mBluetoothGatt.readCharacteristic(getCharacteristic(uuid));
+    }
+
+    private void requestWriteCharacteristic(String uuid, byte[] data) {
+
+        if (mBluetoothGatt == null) {
+            Log.e(TAG, "mBluetoothGatt is nul");
+            return;
+        }
+
+        BluetoothGattCharacteristic characteristic = getCharacteristic(uuid);
+        characteristic.setValue(data);
+        mBluetoothGatt.writeCharacteristic(characteristic);
+    }
+
     /**
      * Read current temperature from the device
      */
     private void requestTemperature() {
         // temperature characteristic
-        BluetoothGattCharacteristic characteristic = mBluetoothLeService.getCharacteristic(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE);
-        mBluetoothLeService.readCharacteristic(characteristic);
+        requestReadCharacteristic(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE);
     }
 
     /**
      * Read current temperature from the device
      */
     private void requestTemperatureRange() {
-        // temperature characteristic
-        BluetoothGattCharacteristic characteristic = mBluetoothLeService.getCharacteristic(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE);
-        mBluetoothLeService.readCharacteristic(characteristic);
+        requestReadCharacteristic(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE);
     }
 
     /**
@@ -362,18 +421,13 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
      * Get current control mode from the device
      */
     private void requestControlMode() {
-        // temperature characteristic
-        BluetoothGattCharacteristic characteristic = mBluetoothLeService.getCharacteristic(SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE);
-        mBluetoothLeService.readCharacteristic(characteristic);
+        requestReadCharacteristic(SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE);
     }
 
     private void setControlMode(Device.ControlMode mode) {
         byte[] data = new byte[1];
         data[0] = mode.toByte();
-        BluetoothGattCharacteristic characteristic = mBluetoothLeService.getCharacteristic(SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE);
-        characteristic.setValue(data);
-        boolean status = mBluetoothLeService.getmBluetoothGatt().writeCharacteristic(characteristic);
-        Log.d(TAG, "write :" + status);
+        requestWriteCharacteristic(SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE, data);
     }
 
     private void toggleControlMode() {
@@ -384,18 +438,13 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
      * Get current switch state from the device
      */
     private void requestSwitchState() {
-        // temperature characteristic
-        BluetoothGattCharacteristic characteristic = mBluetoothLeService.getCharacteristic(SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE);
-        mBluetoothLeService.readCharacteristic(characteristic);
+        requestReadCharacteristic(SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE);
     }
 
     private void setSwitchState(Device.SwitchState state) {
         byte[] data = new byte[1];
         data[0] = state.toByte();
-        BluetoothGattCharacteristic characteristic = mBluetoothLeService.getCharacteristic(SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE);
-        characteristic.setValue(data);
-        boolean status = mBluetoothLeService.getmBluetoothGatt().writeCharacteristic(characteristic);
-        Log.d(TAG, "write :" + status);
+        requestWriteCharacteristic(SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE, data);
     }
 
     private void toggleSwitchState() {
@@ -434,15 +483,5 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
      */
     @Override
     public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
-    }
-
-    private static IntentFilter makeGattUpdateIntentFilter() {
-        final IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
-        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
-        intentFilter.addAction(BluetoothLeService.ACTION_DATA_WRITTEN);
-        return intentFilter;
     }
 }

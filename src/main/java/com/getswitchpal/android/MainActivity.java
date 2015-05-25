@@ -2,6 +2,7 @@ package com.getswitchpal.android;
 
 import android.app.ActionBar;
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -11,6 +12,7 @@ import android.widget.Button;
  * The activity that is used when a user has not connect to a device.
  */
 public class MainActivity extends Activity {
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
