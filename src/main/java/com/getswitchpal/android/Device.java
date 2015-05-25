@@ -26,6 +26,10 @@ public class Device {
             AUTO.data = 0x1;
         }
 
+        public boolean isValid() {
+            return this != UNKNOWN;
+        }
+
         public byte toByte() {
             if (this == UNKNOWN) {
                 throw new RuntimeException("Unknown should never call toByte");
@@ -58,6 +62,10 @@ public class Device {
 
             OFF.data = 0x0;
             ON.data = 0x1;
+        }
+
+        public boolean isValid() {
+            return this != UNKNOWN;
         }
 
         public byte toByte() {
@@ -118,15 +126,15 @@ public class Device {
     public void setControlMode(byte[] data) {
         if (data.length != 1) {
             Log.e(TAG, "control mode data is invalid");
+            return;
+        }
+
+        if (data[0] == (byte) 0x00) {
+            this.controlMode = ControlMode.MANUAL;
+        } else if (data[0] == (byte) 0x01) {
+            this.controlMode = ControlMode.AUTO;
         } else {
-            switch (data[0]) {
-                case 0x0:
-                    this.controlMode = ControlMode.MANUAL;
-                case 0x1:
-                    this.controlMode = ControlMode.AUTO;
-                default:
-                    Log.e(TAG, "unknown control mode");
-            }
+            Log.e(TAG, "unknown control mode:" + String.format("%02X", data[0]));
         }
     }
 
@@ -141,15 +149,15 @@ public class Device {
     public void setSwitchState(byte[] data) {
         if (data.length != 1) {
             Log.e(TAG, "switch state data is invalid");
+            return;
+        }
+
+        if (data[0] == (byte) 0x00) {
+            this.switchState = SwitchState.OFF;
+        } else if (data[0] == (byte) 0x01) {
+            this.switchState = SwitchState.ON;
         } else {
-            switch (data[0]) {
-                case 0x0:
-                    this.controlMode = ControlMode.MANUAL;
-                case 0x1:
-                    this.controlMode = ControlMode.AUTO;
-                default:
-                    Log.e(TAG, "unknown switch state");
-            }
+            Log.e(TAG, "unknown switch state byte: " + String.format("%02X", data[0]));
         }
     }
 
