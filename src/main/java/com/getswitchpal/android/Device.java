@@ -12,11 +12,71 @@ import java.util.Locale;
 public class Device {
 
     public enum ControlMode {
-        AUTO, MANUAL
+        MANUAL, AUTO, UNKNOWN;
+
+        private ControlMode toggle;
+        private byte data;
+
+        static {
+            MANUAL.toggle = AUTO;
+            AUTO.toggle = MANUAL;
+            UNKNOWN.toggle = AUTO;
+
+            MANUAL.data = 0x0;
+            AUTO.data = 0x1;
+        }
+
+        public byte toByte() {
+            if (this == UNKNOWN) {
+                throw new RuntimeException("Unknown should never call toByte");
+            }
+            return data;
+        }
+
+        public boolean toBoolean() {
+            if (this == UNKNOWN) {
+                throw new RuntimeException("Unknown should never call toBoolean");
+            }
+            return data == 0x1;
+        }
+
+        public ControlMode getToggle() {
+            return toggle;
+        }
     }
 
     public enum SwitchState {
-        ON, OFF
+        OFF, ON, UNKNOWN;
+
+        private SwitchState toggle;
+        private byte data;
+
+        static {
+            OFF.toggle = ON;
+            ON.toggle = OFF;
+            UNKNOWN.toggle = ON;
+
+            OFF.data = 0x0;
+            ON.data = 0x1;
+        }
+
+        public byte toByte() {
+            if (this == UNKNOWN) {
+                throw new RuntimeException("Unknown should never call toByte");
+            }
+            return data;
+        }
+
+        public boolean toBoolean() {
+            if (this == UNKNOWN) {
+                throw new RuntimeException("Unknown should never call toBoolean");
+            }
+            return data == 0x1;
+        }
+
+        public SwitchState getToggle() {
+            return toggle;
+        }
     }
 
     private static final String TAG = Device.class.getSimpleName();
@@ -34,6 +94,9 @@ public class Device {
     public Device(String address, String passkey) {
         this.address = address;
         this.passkey = passkey;
+
+        this.controlMode = ControlMode.UNKNOWN;
+        this.switchState = SwitchState.UNKNOWN;
     }
 
     public String getAddress() {

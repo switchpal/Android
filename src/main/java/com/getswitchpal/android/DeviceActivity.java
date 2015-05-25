@@ -39,6 +39,8 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     private TextView mTemperatureView;
     private TextView mTemperatureRangeMinView;
     private TextView mTemperatureRangeMaxView;
+    private ToggleButton mSwitchStateToggle;
+    private ToggleButton mControlModeToggle;
 
     // double back to exit
     private boolean doubleBackToExitPressedOnce = false;
@@ -163,6 +165,25 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
         addressText.setText(mDeviceAddress);
 
         mTemperatureView = (TextView) findViewById(R.id.text_temperature);
+        mTemperatureRangeMinView = (TextView) findViewById(R.id.text_temperature_min);
+        mTemperatureRangeMaxView = (TextView) findViewById(R.id.text_temperature_max);
+        mSwitchStateToggle = (ToggleButton) findViewById(R.id.button_switch);
+        mControlModeToggle = (ToggleButton) findViewById(R.id.button_mode);
+
+        mSwitchStateToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggleSwitchState();
+            }
+        });
+
+        mControlModeToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggleControlMode();
+            }
+        });
+
 
         // get hold on the scan button
         final Button connectButton = (Button) findViewById(R.id.button_connect);
@@ -217,25 +238,23 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
      */
     private void connectDevice(String address) {
         requestTemperature();
-
-
-//        List<BluetoothGattService> services = mBluetoothLeService.getSupportedGattServices();
-//        Log.i(TAG, "number of supported services: " + services.size());
-//        for (BluetoothGattService service: services) {
-//            Log.i(TAG, "service: " + service.toString() + ", uuid=" + service.getUuid());
-//        };
-
-
-        //characteristic.setValue("1");
-        //boolean status = mBluetoothLeService.getmBluetoothGatt().writeCharacteristic(characteristic);
-        //Log.d(TAG, "write :" + status);
     }
 
     /**
-     * Update Views
+     * Update Views:
+     * - temperature
+     * - temperature range
+     * - switch state
+     * - control mode
      */
     private void updateView() {
         mTemperatureView.setText(String.format("%.1f", mDevice.getTemperature()));
+        mTemperatureRangeMinView.setText(String.format("%.1f", mDevice.getTemperatureRangeMin()));
+        mTemperatureRangeMaxView.setText(String.format("%.1f", mDevice.getTemperatureRangeMax()));
+
+        mSwitchStateToggle.setChecked(mDevice.getSwitchState().toBoolean());
+        mControlModeToggle.setChecked(mDevice.getControlMode().toBoolean());
+
     }
 
     private void showRangeConfigDialog() {
@@ -319,17 +338,17 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
         mBluetoothLeService.readCharacteristic(characteristic);
     }
 
-    private void setControlMode(boolean mode) {
+    private void setControlMode(Device.ControlMode mode) {
         byte[] data = new byte[1];
-        if (mode) {
-            data[0] = 0x1;
-        } else {
-            data[0] = 0x0;
-        }
+        data[0] = mode.toByte();
         BluetoothGattCharacteristic characteristic = mBluetoothLeService.getCharacteristic(SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE);
         characteristic.setValue(data);
         boolean status = mBluetoothLeService.getmBluetoothGatt().writeCharacteristic(characteristic);
         Log.d(TAG, "write :" + status);
+    }
+
+    private void toggleControlMode() {
+        setControlMode(mDevice.getControlMode().getToggle());
     }
 
     /**
@@ -341,7 +360,17 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
         mBluetoothLeService.readCharacteristic(characteristic);
     }
 
-    private void setSwitchState(boolean state) {
+    private void setSwitchState(Device.SwitchState state) {
+        byte[] data = new byte[1];
+        data[0] = state.toByte();
+        BluetoothGattCharacteristic characteristic = mBluetoothLeService.getCharacteristic(SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE);
+        characteristic.setValue(data);
+        boolean status = mBluetoothLeService.getmBluetoothGatt().writeCharacteristic(characteristic);
+        Log.d(TAG, "write :" + status);
+    }
+
+    private void toggleSwitchState() {
+        setSwitchState(mDevice.getSwitchState().getToggle());
     }
 
     /**
