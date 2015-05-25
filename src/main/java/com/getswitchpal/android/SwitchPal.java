@@ -4,19 +4,20 @@ package com.getswitchpal.android;
  * UUIDs defined by SwitchPal
  */
 public class SwitchPal {
-    //public static final String UUID_SERVICE = "0000fff0-0000-1000-8000-00805f9b34fb";
-      public static final String UUID_SERVICE = "53776974-6368-5061-6C00-000000000000";
-
-    // the current temperature, read only
-    public static final String UUID_CHARACTERISTIC_TEMPERATURE_CURRENT = "0000fff1-0000-1000-8000-00805f9b34fb";
-    // minimum temperature, read and write
-    public static final String UUID_CHARACTERISTIC_TEMPERATURE_MIN = "00000000-0000-0000-0011-000000000000";
-    // maximum temperature, read and write
-    public static final String UUID_CHARACTERISTIC_TEMPERATURE_MAX = "00000000-0000-0000-0012-000000000000";
+    // service UUID
+    public static final String UUID_SERVICE = "0000fff0-0000-1000-8000-00805f9b34fb";
 
     // the switch state, read and write
-    public static final String UUID_CHARACTERISTIC_STATE = "00000000-0000-0000-0020-000000000000";
+    public static final String UUID_CHARACTERISTIC_SWITCH_STATE = "0000fff1-0000-1000-8000-00805f9b34fb";
+
     // the control mode, read and write
-    public static final String UUID_CHARACTERISTIC_MODE = "00000000-0000-0000-0030-000000000000";
+    public static final String UUID_CHARACTERISTIC_CONTROL_MODE = "0000fff2-0000-1000-8000-00805f9b34fb";
+
+    // the current temperature, read only
+    public static final String UUID_CHARACTERISTIC_TEMPERATURE = "0000fff3-0000-1000-8000-00805f9b34fb";
+
+    // temperature range, read and write
+    public static final String UUID_CHARACTERISTIC_TEMPERATURE_RANGE = "0000fff4-0000-1000-8000-00805f9b34fb";
+
 
 }

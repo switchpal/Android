@@ -45,6 +45,8 @@ public class BluetoothLeService extends Service {
             "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
     public final static String EXTRA_DATA =
             "com.example.bluetooth.le.EXTRA_DATA";
+    public final static String EXTRA_UUID =
+            "com.example.bluetooth.le.EXTRA_UUID";
 
 
     // Implements callback methods for GATT events that the app cares about.  For example,
@@ -54,7 +56,7 @@ public class BluetoothLeService extends Service {
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             String intentAction;
             if (newState == BluetoothProfile.STATE_CONNECTED) {
-            	Log.i("STATE CONNECTED", "OK");
+                Log.i("STATE CONNECTED", "OK");
                 intentAction = ACTION_GATT_CONNECTED;
                 mConnectionState = STATE_CONNECTED;
                 broadcastUpdate(intentAction);
@@ -64,15 +66,15 @@ public class BluetoothLeService extends Service {
                 Log.i("AFTER DISCOVER SERVICES", "OK");
 
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-            	Log.i("STATE DISCONNECTED", "OK");
-            	intentAction = ACTION_GATT_DISCONNECTED;
+                Log.i("STATE DISCONNECTED", "OK");
+                intentAction = ACTION_GATT_DISCONNECTED;
                 mConnectionState = STATE_DISCONNECTED;
                 Log.i(TAG, "Disconnected from GATT server.");
                 broadcastUpdate(intentAction);
                 Log.i("STATE DISCONNECTED BROADCAST SENT", "OK");
             }
 
-            if(mConnectionState==123334){
+            if (mConnectionState == 123334) {
 
             }
         }
@@ -112,13 +114,18 @@ public class BluetoothLeService extends Service {
     private void broadcastUpdate(final String action, final BluetoothGattCharacteristic characteristic) {
         final Intent intent = new Intent(action);
 
-            // For all other profiles, writes the data formatted in HEX.
-            final byte[] data = characteristic.getValue();
-            if (data != null && data.length > 0) {
-                final StringBuilder stringBuilder = new StringBuilder(data.length);
-                for(byte byteChar : data)
-                    stringBuilder.append(String.format("%02X ", byteChar));
-                intent.putExtra(EXTRA_DATA, new String(data) + "\n" + stringBuilder.toString());
+        // For all other profiles, writes the data formatted in HEX.
+        final byte[] data = characteristic.getValue();
+        if (data != null && data.length > 0) {
+            //final StringBuilder stringBuilder = new StringBuilder(data.length);
+            //for (byte byteChar : data) {
+            //    stringBuilder.append(String.format("%02X ", byteChar));
+            //}
+            intent.putExtra(EXTRA_DATA, characteristic.getValue());
+            //intent.putExtra(EXTRA_DATA, new String(data) + "\n" + stringBuilder.toString());
+            intent.putExtra(EXTRA_UUID, characteristic.getUuid().toString());
+        } else {
+            Log.d(TAG, "data is empty");
         }
         sendBroadcast(intent);
     }
@@ -174,11 +181,10 @@ public class BluetoothLeService extends Service {
      * Connects to the GATT server hosted on the Bluetooth LE device.
      *
      * @param address The device address of the destination device.
-     *
      * @return Return true if the connection is initiated successfully. The connection result
-     *         is reported asynchronously through the
-     *         {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
-     *         callback.
+     * is reported asynchronously through the
+     * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
+     * callback.
      */
     public boolean connect(final String address) {
         if (mBluetoothAdapter == null || address == null) {
@@ -257,7 +263,7 @@ public class BluetoothLeService extends Service {
      * Enables or disables notification on a give characteristic.
      *
      * @param characteristic Characteristic to act on.
-     * @param enabled If true, enable notification.  False otherwise.
+     * @param enabled        If true, enable notification.  False otherwise.
      */
     public void setCharacteristicNotification(BluetoothGattCharacteristic characteristic,
                                               boolean enabled) {

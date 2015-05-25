@@ -8,15 +8,11 @@ import android.content.*;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.util.Base64;
 import android.util.Log;
-import android.util.Pair;
 import android.view.View;
 import android.widget.*;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 
 /**
  * The activity that is used when a user has not connect to a device.
@@ -28,22 +24,21 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     public static final String EXTRAS_DEVICE_ADDRESS = "address";
     public static final String EXTRAS_DEVICE_PASSKEY = "passkey";
 
-    private BluetoothAdapter mBluetoothAdapter;
-
     // device related
     private String mDeviceAddress;
     private String mDevicePasskey;
-    // the control mode, true = auto, false = manual
-    private boolean mDeviceMode;
-    // the state of the switch, on/off
-    private boolean mDeviceState;
 
     private BluetoothLeService mBluetoothLeService;
     private TextView mConnectionState;
     private boolean mConnected = false;
 
     // the device
-    private BluetoothDevice mDevice;
+    private Device mDevice;
+
+    // views
+    private TextView mTemperatureView;
+    private TextView mTemperatureRangeMinView;
+    private TextView mTemperatureRangeMaxView;
 
     // double back to exit
     private boolean doubleBackToExitPressedOnce = false;
@@ -99,8 +94,30 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
                 Log.i("ON DISPLAYED SERVICES", "OK");
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
                 Log.i("ON GATT DATA AVAILABLE", "OK");
-                Log.i(TAG, intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
-                //displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
+                //Log.i(TAG, intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA));
+                byte[] data = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
+                String uuid = intent.getStringExtra(BluetoothLeService.EXTRA_UUID);
+                switch (uuid) {
+                    case SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE:
+                        mDevice.setSwitchState(data);
+                        Log.i(TAG, "Switch State is:" + mDevice.getSwitchState());
+                        break;
+                    case SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE:
+                        mDevice.setControlMode(data);
+                        Log.i(TAG, "Control Mode is:" + mDevice.getControlMode());
+                        break;
+                    case SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE:
+                        mDevice.setTemperature(data);
+                        Log.i(TAG, "Temperature is: " + mDevice.getTemperature());
+                        break;
+                    case SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE:
+                        mDevice.setTemperatureRange(data);
+                        Log.i(TAG, "Temperature Range: min=" + mDevice.getTemperatureRangeMin() + ", max=" +mDevice.getTemperatureRangeMax());
+                        break;
+                    default:
+                        Log.i(TAG, "unknown UUID: " + uuid);
+                }
+                updateView();
             }
         }
     };
@@ -140,8 +157,12 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
             mDeviceAddress = "00:18:31:F1:68:C0";
         }
 
+        mDevice = new Device(mDeviceAddress, mDevicePasskey);
+
         final TextView addressText = (TextView) findViewById(R.id.text_device_address);
         addressText.setText(mDeviceAddress);
+
+        mTemperatureView = (TextView) findViewById(R.id.text_temperature);
 
         // get hold on the scan button
         final Button connectButton = (Button) findViewById(R.id.button_connect);
@@ -151,11 +172,6 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
                 connectDevice(mDeviceAddress);
             }
         });
-
-        // Initializes Bluetooth adapter.
-        //final BluetoothManager bluetoothManager =
-        //        (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-        //mBluetoothAdapter = bluetoothManager.getAdapter();
 
         // Bind temperature settings
         final LinearLayout rangeGroup = (LinearLayout) findViewById(R.id.group_range);
@@ -200,29 +216,26 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
      * Connect to the device with a given MAC address
      */
     private void connectDevice(String address) {
+        requestTemperature();
 
 
-        //List<BluetoothGattService> services = mBluetoothLeService.getSupportedGattServices();
-        //Log.i(TAG, "number of supported services: " + services.size());
-        //for (BluetoothGattService service: services) {
-        //    Log.i(TAG, "service: " + service.toString());
-        //};
+//        List<BluetoothGattService> services = mBluetoothLeService.getSupportedGattServices();
+//        Log.i(TAG, "number of supported services: " + services.size());
+//        for (BluetoothGattService service: services) {
+//            Log.i(TAG, "service: " + service.toString() + ", uuid=" + service.getUuid());
+//        };
 
 
-        // temperature characteristic
-        BluetoothGattCharacteristic characteristic = mBluetoothLeService.getCharacteristic(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_CURRENT);
-        //mBluetoothLeService.readCharacteristic(characteristic);
-        characteristic.setValue("1");
-        boolean status = mBluetoothLeService.getmBluetoothGatt().writeCharacteristic(characteristic);
-        Log.d(TAG, "write :" + status);
+        //characteristic.setValue("1");
+        //boolean status = mBluetoothLeService.getmBluetoothGatt().writeCharacteristic(characteristic);
+        //Log.d(TAG, "write :" + status);
+    }
 
-
-        //mDevice = mBluetoothAdapter.getRemoteDevice(address);
-        //if (mDevice.getName().equals("SwitchPal")) {
-        //    Toast.makeText(DeviceActivity.this, "Connected!", Toast.LENGTH_LONG).show();
-        //} else {
-        //    Toast.makeText(DeviceActivity.this, "Error happens!", Toast.LENGTH_LONG).show();
-        //}
+    /**
+     * Update Views
+     */
+    private void updateView() {
+        mTemperatureView.setText(String.format("%.1f", mDevice.getTemperature()));
     }
 
     private void showRangeConfigDialog() {
@@ -276,8 +289,19 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     /**
      * Read current temperature from the device
      */
-    private float getTemperature() {
-        return 0;
+    private void requestTemperature() {
+        // temperature characteristic
+        BluetoothGattCharacteristic characteristic = mBluetoothLeService.getCharacteristic(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE);
+        mBluetoothLeService.readCharacteristic(characteristic);
+    }
+
+    /**
+     * Read current temperature from the device
+     */
+    private void requestTemperatureRange() {
+        // temperature characteristic
+        BluetoothGattCharacteristic characteristic = mBluetoothLeService.getCharacteristic(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE);
+        mBluetoothLeService.readCharacteristic(characteristic);
     }
 
     /**
@@ -289,18 +313,32 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     /**
      * Get current control mode from the device
      */
-    private void getControlMode() {
-
+    private void requestControlMode() {
+        // temperature characteristic
+        BluetoothGattCharacteristic characteristic = mBluetoothLeService.getCharacteristic(SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE);
+        mBluetoothLeService.readCharacteristic(characteristic);
     }
 
-    private void setControlMode() {
+    private void setControlMode(boolean mode) {
+        byte[] data = new byte[1];
+        if (mode) {
+            data[0] = 0x1;
+        } else {
+            data[0] = 0x0;
+        }
+        BluetoothGattCharacteristic characteristic = mBluetoothLeService.getCharacteristic(SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE);
+        characteristic.setValue(data);
+        boolean status = mBluetoothLeService.getmBluetoothGatt().writeCharacteristic(characteristic);
+        Log.d(TAG, "write :" + status);
     }
 
     /**
-     * Get current switch state
+     * Get current switch state from the device
      */
-    private boolean getSwitchState() {
-        return false;
+    private void requestSwitchState() {
+        // temperature characteristic
+        BluetoothGattCharacteristic characteristic = mBluetoothLeService.getCharacteristic(SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE);
+        mBluetoothLeService.readCharacteristic(characteristic);
     }
 
     private void setSwitchState(boolean state) {
@@ -324,7 +362,7 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
 
             @Override
             public void run() {
-                doubleBackToExitPressedOnce=false;
+                doubleBackToExitPressedOnce = false;
             }
         }, 2000);
     }

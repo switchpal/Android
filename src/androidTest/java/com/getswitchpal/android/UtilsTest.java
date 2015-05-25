@@ -1,6 +1,5 @@
 package com.getswitchpal.android;
 
-import android.util.Pair;
 import junit.framework.TestCase;
 
 /**
@@ -8,9 +7,9 @@ import junit.framework.TestCase;
 public class UtilsTest extends TestCase {
 
     public void testGetDeviceInfoFromUrl() {
-        Utils.DeviceInfo deviceInfo = Utils.getDeviceInfoFromUrl("http://getswitchpal.com/app/?device=ZNJW59nKFChX");
-        assertEquals(deviceInfo.getAddress(), "64:D2:56:E7:D9:CA");
-        assertEquals(deviceInfo.getPasskey(), "142857");
+        Device device = Device.getDeviceInfoFromQRCode("http://getswitchpal.com/app/?device=ZNJW59nKFChX");
+        assertEquals(device.getAddress(), "64:D2:56:E7:D9:CA");
+        assertEquals(device.getPasskey(), "142857");
     }
 
     /**
@@ -22,8 +21,8 @@ public class UtilsTest extends TestCase {
      *   is `ZNJW59nKFChX`
      */
     public void testDecodeDeviceInfo() {
-        Utils.DeviceInfo deviceInfo = Utils.decodeDeviceInfo("ZNJW59nKFChX");
-        assertEquals(deviceInfo.getAddress(), "64:D2:56:E7:D9:CA");
-        assertEquals(deviceInfo.getPasskey(), "142857");
+        Device device = Device.decodeDeviceInfo("ZNJW59nKFChX");
+        assertEquals(device.getAddress(), "64:D2:56:E7:D9:CA");
+        assertEquals(device.getPasskey(), "142857");
     }
 }
