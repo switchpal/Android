@@ -10,8 +10,11 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.*;
+import com.parse.ParseAnalytics;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -468,6 +471,18 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     }
 
     private void setControlMode(Device.ControlMode mode) {
+        Map<String, String> dimensions = new HashMap<>();
+        String modeString;
+        if (mode == Device.ControlMode.AUTO) {
+            modeString = "auto";
+        } else if (mode == Device.ControlMode.MANUAL) {
+            modeString = "manual";
+        } else {
+            modeString = "unknown";
+        }
+        dimensions.put("mode", modeString);
+        ParseAnalytics.trackEventInBackground("setControlMode", dimensions);
+
         byte[] data = new byte[1];
         data[0] = mode.toByte();
         requestWriteCharacteristic(SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE, data);
@@ -485,6 +500,18 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     }
 
     private void setSwitchState(Device.SwitchState state) {
+        Map<String, String> dimensions = new HashMap<>();
+        String stateString;
+        if (state == Device.SwitchState.ON) {
+            stateString = "on";
+        } else if (state == Device.SwitchState.OFF) {
+            stateString = "off";
+        } else {
+            stateString = "unknown";
+        }
+        dimensions.put("state", stateString);
+        ParseAnalytics.trackEventInBackground("setSwitchState", dimensions);
+
         byte[] data = new byte[1];
         data[0] = state.toByte();
         requestWriteCharacteristic(SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE, data);

@@ -15,6 +15,9 @@ dependencies {
     }
     compile 'com.android.support:design:22.2.0'
     compile 'me.dm7.barcodescanner:zxing:1.7'
+
+    compile 'com.parse.bolts:bolts-android:1.+'
+    compile fileTree(dir: 'libs', include: 'Parse-*.jar')
 }
 
 android {
