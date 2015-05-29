@@ -2,6 +2,7 @@ package com.getswitchpal.android;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import android.view.View;
@@ -63,6 +64,9 @@ public class QRScanActivity extends Activity implements ZXingScannerView.ResultH
             Toast.makeText(this,
                     "address = " + device.getAddress() + ", passkey = " + device.getPasskey(),
                     Toast.LENGTH_SHORT).show();
+
+            SharedPreferences sharedPref = getPreferences(MODE_PRIVATE);
+            device.writeSharedPreferences(sharedPref);
 
             Intent intent = new Intent(QRScanActivity.this, DeviceActivity.class);
             intent.putExtra(DeviceActivity.EXTRAS_DEVICE_ADDRESS, device.getAddress());

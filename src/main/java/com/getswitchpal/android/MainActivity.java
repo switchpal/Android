@@ -4,6 +4,7 @@ import android.app.ActionBar;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -19,6 +20,13 @@ public class MainActivity extends Activity {
 
         // set the layout
         setContentView(R.layout.activity_main);
+
+        SharedPreferences sharedPref = getPreferences(MODE_PRIVATE);
+        Device device = Device.getDeviceFromSharedPreferences(sharedPref);
+        if (device != null) {
+            startDeviceActivity();
+            return;
+        }
 
         // hide the actionBar, later we can decide whether to disable the ActionBar globally
         ActionBar actionBar = getActionBar();
@@ -41,10 +49,14 @@ public class MainActivity extends Activity {
         debugButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, DeviceActivity.class);
-                intent.setFlags(intent.getFlags() | Intent.FLAG_ACTIVITY_NO_HISTORY);
-                MainActivity.this.startActivity(intent);
+                startDeviceActivity();
             }
         });
+    }
+
+    private void startDeviceActivity() {
+        Intent intent = new Intent(MainActivity.this, DeviceActivity.class);
+        intent.setFlags(intent.getFlags() | Intent.FLAG_ACTIVITY_NO_HISTORY);
+        MainActivity.this.startActivity(intent);
     }
 }

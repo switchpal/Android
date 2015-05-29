@@ -1,5 +1,7 @@
 package com.getswitchpal.android;
 
+import android.app.Activity;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.util.Base64;
 import android.util.Log;
@@ -175,6 +177,24 @@ public class Device {
         Uri uri = Uri.parse(url);
         String deviceInfoString = uri.getQueryParameter("device");
         return decodeDeviceInfo(deviceInfoString);
+    }
+
+    private final static String PREF_ADDRESS = "deviceAddress";
+    private final static String PREF_PASSKEY = "devicePasskey";
+    public static Device getDeviceFromSharedPreferences(SharedPreferences sharedPref) {
+        String address = sharedPref.getString(PREF_ADDRESS, null);
+        String passkey = sharedPref.getString(PREF_PASSKEY, null);
+        if (address == null || passkey == null) {
+            return null;
+        }
+        return new Device(address, passkey);
+    }
+
+    public void writeSharedPreferences(SharedPreferences sharedPref) {
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString(PREF_ADDRESS, getAddress());
+        editor.putString(PREF_PASSKEY, getPasskey());
+        editor.apply();
     }
 
     /**
