@@ -13,6 +13,7 @@ dependencies {
     repositories {
         mavenCentral()
     }
+    compile 'com.android.support:design:22.2.0'
     compile 'me.dm7.barcodescanner:zxing:1.7'
 }
 

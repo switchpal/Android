@@ -42,6 +42,10 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     private ToggleButton mSwitchStateToggle;
     private ToggleButton mControlModeToggle;
 
+    private RelativeLayout mProgressOverlay;
+    private ProgressBar mProgressBar;
+    private TextView mProgressTextView;
+
     // double back to exit
     private boolean doubleBackToExitPressedOnce = false;
 
@@ -84,6 +88,9 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
         mTemperatureRangeMaxView = (TextView) findViewById(R.id.text_temperature_max);
         mSwitchStateToggle = (ToggleButton) findViewById(R.id.button_switch);
         mControlModeToggle = (ToggleButton) findViewById(R.id.button_mode);
+
+        mProgressOverlay = (RelativeLayout) findViewById(R.id.overlay_progress);
+        mProgressTextView = (TextView) findViewById(R.id.text_progress);
 
         mSwitchStateToggle.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -151,6 +158,7 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             String intentAction;
             if (newState == BluetoothProfile.STATE_CONNECTED) {
+                hideProgress();
                 Log.i("STATE CONNECTED", "OK");
                 // Attempts to discover services after successful connection.
                 mBluetoothGatt.discoverServices();
@@ -263,7 +271,7 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
             // We want to directly connect to the device, so we are setting the autoConnect
             // parameter to false.
             mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
-            Log.d(TAG, "connect to device");
+            showProgress("Connecting to your SwitchPal device");
         }
     }
 
@@ -284,7 +292,6 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
     }
 
     /**
@@ -318,6 +325,9 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
                 if (mDevice.getControlMode().isValid()) {
                     mControlModeToggle.setChecked(mDevice.getControlMode().toBoolean());
                 }
+
+                // since the view is updated, remove ProgressBar
+                hideProgress();
             }
         });
     }
@@ -370,11 +380,43 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
         dialog.show();
     }
 
+    /**
+     * Add a overlay showing an operation is in progress
+     */
+    private void showProgress(String text) {
+        final String displayText;
+        if (text == null) {
+            displayText = "";
+        } else {
+            displayText = text;
+        }
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mProgressTextView.setText(displayText);
+                mProgressOverlay.setVisibility(View.VISIBLE);
+            }
+        });
+    }
+
+    /**
+     * Remove the overlay
+     */
+    private void hideProgress() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mProgressOverlay.setVisibility(View.INVISIBLE);
+            }
+        });
+    }
+
     private BluetoothGattCharacteristic getCharacteristic(String uuid) {
         return mBluetoothGatt.getService(UUID.fromString(SwitchPal.UUID_SERVICE)).getCharacteristic(UUID.fromString(uuid));
     }
 
     private void requestReadCharacteristic(String uuid) {
+        showProgress("Communicating with your SwitchPal Device");
 
         if (mBluetoothGatt == null) {
             Log.e(TAG, "mBluetoothGatt is nul");
@@ -385,6 +427,7 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     }
 
     private void requestWriteCharacteristic(String uuid, byte[] data) {
+        showProgress("Commanding your SwitchPal Device");
 
         if (mBluetoothGatt == null) {
             Log.e(TAG, "mBluetoothGatt is nul");

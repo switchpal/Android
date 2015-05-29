@@ -132,4 +132,31 @@
         android:textColor="#BBBBBB"
         android:textSize="12dp" />
 
+    <!-- when there is operation going on, add this overlay -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/overlay_progress"
+        android:visibility="visible"
+        android:background="@color/background_material_light"
+        android:alpha="0.96">
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:id="@+id/progressbar"
+            />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_above="@id/progressbar"
+            android:layout_marginBottom="20dp"
+            android:text="Operation in process"
+            android:id="@+id/text_progress"
+            />
+    </RelativeLayout>
+
 </RelativeLayout>
