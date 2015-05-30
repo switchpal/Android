@@ -252,6 +252,11 @@ public class Device {
         }
     }
 
+    public void setTemperatureRange(float min, float max) {
+        temperatureRangeMin = min;
+        temperatureRangeMax = max;
+    }
+
     public float getTemperatureRangeMin() {
         return temperatureRangeMin;
     }

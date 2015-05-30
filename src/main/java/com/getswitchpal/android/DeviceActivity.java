@@ -2,6 +2,7 @@ package com.getswitchpal.android;
 
 import android.app.ActionBar;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.bluetooth.*;
 import android.content.*;
@@ -345,7 +346,7 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
         for (float temp = 24; temp < 30.1; temp += 0.1) {
             values.add(String.format("%2.1f", temp));
         }
-        String[] displayedValues = values.toArray(new String[values.size()]);
+        final String[] displayedValues = values.toArray(new String[values.size()]);
 
         // setup min temperature
         final NumberPicker minTempPicker = (NumberPicker) dialog.findViewById(R.id.picker_temp_min);
@@ -371,6 +372,9 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
             @Override
             public void onClick(View v) {
                 //tv.setText(String.valueOf(np.getValue())); //set the value to textview
+                float min = Float.parseFloat(displayedValues[minTempPicker.getValue()]);
+                float max = Float.parseFloat(displayedValues[maxTempPicker.getValue()]);
+                setTemperatureRange(min, max);
                 dialog.dismiss();
             }
         });
@@ -460,7 +464,31 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     /**
      * When to turn on/off the switch
      */
-    private void setTemperatureRange() {
+    private void setTemperatureRange(float min, float max) {
+
+        if (min < 20 || min > 32 || max < 20 || max > 32) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Error")
+                    .setMessage("Temperature should between 20 to 32.")
+                    .setNeutralButton("OK", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            //
+                        }
+                    })
+                    .show();
+            return;
+        }
+
+        mDevice.setTemperatureRange(min, max);
+
+        byte[] data = new byte[4];
+        data[0] = (byte) ((int) min);
+        data[1] = (byte) ((min - (int) min) * 100);
+        data[2] = (byte) ((int) max);
+        data[3] = (byte) ((max - (int) max) * 100);
+
+        requestWriteCharacteristic(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE, data);
     }
 
     /**
