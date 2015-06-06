@@ -179,12 +179,18 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
                 queuedReadCharacteristicUuids.push(SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE);
                 queuedReadCharacteristicUuids.push(SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE);
                 queuedReadCharacteristicUuids.push(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE);
-                queuedReadCharacteristicUuids.push(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE);
+
+                //queuedReadCharacteristicUuids.push(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE);
+                requestTemperature();
+
+                mHandler.postDelayed(mDeviceInfoUpdater, mInterval);
+            } else if (isManualOperationInProgress()) {
+                // if user operation is in progress, back off and try again later.
+                mHandler.postDelayed(mDeviceInfoUpdater, 1000);
             } else {
                 requestTemperature();
+                mHandler.postDelayed(mDeviceInfoUpdater, mInterval);
             }
-
-            mHandler.postDelayed(mDeviceInfoUpdater, mInterval);
         }
     };
 
@@ -456,6 +462,10 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
             }
         });
         dialog.show();
+    }
+
+    private boolean isManualOperationInProgress() {
+        return mProgressOverlay.getVisibility() == View.VISIBLE;
     }
 
     /**
