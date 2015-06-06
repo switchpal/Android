@@ -23,6 +23,8 @@ import java.util.UUID;
 
 /**
  * The activity that is used when a user has not connect to a device.
+ *
+ *
  */
 public class DeviceActivity extends Activity implements NumberPicker.OnValueChangeListener, PopupMenu.OnMenuItemClickListener {
 
@@ -66,25 +68,21 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
         // set the layout
         setContentView(R.layout.activity_device);
 
-        // hide the actionBar, later we can decide whether to disable the ActionBar globally
-        ActionBar actionBar = getActionBar();
-        if (actionBar != null) {
-            actionBar.hide();
-        }
+        // get device info from the intent
+        Bundle extras = getIntent().getExtras();
 
         // device related
         String mDeviceAddress = null;
         String mDevicePasskey = null;
-
-        // get device info from the intent
-        Bundle extras = getIntent().getExtras();
         if (extras != null) {
             mDeviceAddress = extras.getString(EXTRAS_DEVICE_ADDRESS);
             mDevicePasskey = extras.getString(EXTRAS_DEVICE_PASSKEY);
         }
 
         if (mDeviceAddress == null) {
-            mDeviceAddress = "00:18:31:F1:68:C0";
+            Toast.makeText(DeviceActivity.this, "No device address is given, this is wrong!", Toast.LENGTH_LONG).show();
+            finish();
+            return;
         }
 
         mDevice = new Device(mDeviceAddress, mDevicePasskey);
@@ -174,8 +172,14 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     // connection change and services discovered.
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
-        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+        public void onConnectionStateChange(BluetoothGatt gatt, int status, final int newState) {
             String intentAction;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(DeviceActivity.this, "BluetoothGattCallback state change to:" + newState, Toast.LENGTH_LONG).show();
+                }
+            });
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 hideProgress();
                 Log.i("STATE CONNECTED", "OK");
@@ -290,6 +294,10 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
             // We want to directly connect to the device, so we are setting the autoConnect
             // parameter to false.
             mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
+            if (mBluetoothGatt == null) {
+                Toast.makeText(this, "device.connectGatt returns null", Toast.LENGTH_LONG).show();
+                return;
+            }
             showProgress("Connecting to your SwitchPal device");
         }
     }

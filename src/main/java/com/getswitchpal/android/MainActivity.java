@@ -27,7 +27,13 @@ public class MainActivity extends Activity {
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         Device device = Device.getDeviceFromSharedPreferences(sharedPref);
         if (device != null) {
-            startDeviceActivity();
+            Intent intent = new Intent(MainActivity.this, DeviceActivity.class);
+            intent.putExtra(DeviceActivity.EXTRAS_DEVICE_ADDRESS, device.getAddress());
+            intent.putExtra(DeviceActivity.EXTRAS_DEVICE_PASSKEY, device.getPasskey());
+
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_HISTORY);
+            MainActivity.this.startActivity(intent);
+            finish();
             return;
         }
 
@@ -48,21 +54,18 @@ public class MainActivity extends Activity {
             }
         });
 
+        // TODO: remove this after debugging
         final Button debugButton = (Button) findViewById(R.id.text_debug);
         debugButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startDeviceActivity();
+                Intent intent = new Intent(MainActivity.this, DeviceActivity.class);
+                intent.setFlags(intent.getFlags() | Intent.FLAG_ACTIVITY_NO_HISTORY);
+                MainActivity.this.startActivity(intent);
             }
         });
 
         // track app open
         ParseAnalytics.trackAppOpenedInBackground(getIntent());
-    }
-
-    private void startDeviceActivity() {
-        Intent intent = new Intent(MainActivity.this, DeviceActivity.class);
-        intent.setFlags(intent.getFlags() | Intent.FLAG_ACTIVITY_NO_HISTORY);
-        MainActivity.this.startActivity(intent);
     }
 }
