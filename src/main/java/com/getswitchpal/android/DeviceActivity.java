@@ -16,10 +16,7 @@ import android.view.View;
 import android.widget.*;
 import com.parse.ParseAnalytics;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * The activity that is used when a user has not connect to a device.
@@ -37,6 +34,10 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
 
     private TextView mConnectionState;
     private boolean mConnected = false;
+
+    // whether we have got a complete Device information like control mode and switch state,
+    // The temperature will be updated periodically, but control mode and switch state will be notified by the device
+    private boolean mHasInitialized = false;
 
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothGatt mBluetoothGatt;
@@ -59,6 +60,13 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
 
     // double back to exit
     private boolean doubleBackToExitPressedOnce = false;
+
+    // we need to update Device info periodically, every 7 seconds
+    private int mInterval = 7000;
+    private Handler mHandler;
+
+    // when requesting Device info periodically, we need to request characteristics one by one
+    private Stack<String> queuedReadCharacteristicUuids = new Stack<>();
 
 
     @Override
@@ -112,6 +120,7 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
             }
         });
 
+        mHandler = new Handler();
 
         final ImageView moreView = (ImageView) findViewById(R.id.image_more);
         moreView.setOnClickListener(new View.OnClickListener() {
@@ -121,15 +130,6 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
                 popup.setOnMenuItemClickListener(DeviceActivity.this);
                 popup.inflate(R.menu.more);
                 popup.show();
-            }
-        });
-
-        // get hold on the scan button
-        final Button connectButton = (Button) findViewById(R.id.button_connect);
-        connectButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                requestAllDeviceInfo();
             }
         });
 
@@ -168,24 +168,65 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
         }
     }
 
+    Runnable mDeviceInfoUpdater = new Runnable() {
+        @Override
+        public void run() {
+
+            // we force a full device info read at resume
+            if (!mHasInitialized) {
+                mHasInitialized = true;
+                // queue all the readable info
+                queuedReadCharacteristicUuids.push(SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE);
+                queuedReadCharacteristicUuids.push(SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE);
+                queuedReadCharacteristicUuids.push(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE);
+                queuedReadCharacteristicUuids.push(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE);
+            } else {
+                requestTemperature();
+            }
+
+            mHandler.postDelayed(mDeviceInfoUpdater, mInterval);
+        }
+    };
+
+    void startRepeatingTask() {
+        // we force a full device info read at resume
+        mHasInitialized = false;
+        mDeviceInfoUpdater.run();
+    }
+
+    void stopRepeatingTask() {
+        mHandler.removeCallbacks(mDeviceInfoUpdater);
+    }
+
     // Implements callback methods for GATT events that the app cares about.  For example,
     // connection change and services discovered.
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, final int newState) {
             String intentAction;
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Toast.makeText(DeviceActivity.this, "BluetoothGattCallback state change to:" + newState, Toast.LENGTH_LONG).show();
-                }
-            });
+
+            // For debugging purpose
+            //runOnUiThread(new Runnable() {
+            //    @Override
+            //    public void run() {
+            //        Toast.makeText(DeviceActivity.this, "BluetoothGattCallback state change to:" + newState, Toast.LENGTH_LONG).show();
+            //    }
+            //});
+
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 hideProgress();
                 Log.i("STATE CONNECTED", "OK");
                 // Attempts to discover services after successful connection.
                 mBluetoothGatt.discoverServices();
                 Log.i("AFTER DISCOVER SERVICES", "OK");
+
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        startRepeatingTask();
+                    }
+                });
 
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 Log.i("STATE DISCONNECTED", "OK");
@@ -221,6 +262,9 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
                         Log.i(TAG, "unknown UUID: " + uuid);
                 }
                 updateView();
+                if (queuedReadCharacteristicUuids.size() != 0) {
+                    requestReadCharacteristic(queuedReadCharacteristicUuids.pop());
+                }
             }
         }
 
@@ -268,7 +312,6 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     @Override
     protected void onResume() {
         super.onResume();
-        //requestAllDeviceInfo();
 
         BluetoothManager mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         if (mBluetoothManager == null) {
@@ -306,6 +349,8 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     protected void onPause() {
         super.onPause();
 
+        stopRepeatingTask();
+
         if (mBluetoothGatt != null) {
             mBluetoothGatt.close();
             mBluetoothGatt = null;
@@ -319,16 +364,6 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     @Override
     protected void onDestroy() {
         super.onDestroy();
-    }
-
-    /**
-     * Connect to the device with a given MAC address
-     */
-    private void requestAllDeviceInfo() {
-        //requestSwitchState();
-        //requestControlMode();
-        requestTemperature();
-        //requestTemperatureRange();
     }
 
     /**
@@ -459,7 +494,7 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     }
 
     private void requestReadCharacteristic(String uuid) {
-        showProgress("Communicating with your SwitchPal Device");
+        //showProgress("Communicating with your SwitchPal Device");
 
         if (mBluetoothGatt == null) {
             Log.e(TAG, "mBluetoothGatt is nul");

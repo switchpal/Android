@@ -31,7 +31,7 @@ public class MainActivity extends Activity {
             intent.putExtra(DeviceActivity.EXTRAS_DEVICE_ADDRESS, device.getAddress());
             intent.putExtra(DeviceActivity.EXTRAS_DEVICE_PASSKEY, device.getPasskey());
 
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_HISTORY);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             MainActivity.this.startActivity(intent);
             finish();
             return;
