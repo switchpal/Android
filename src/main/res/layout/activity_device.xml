@@ -1,6 +1,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#ff2196F3"
     android:orientation="vertical">
 
     <TextView
@@ -137,7 +138,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:id="@+id/overlay_progress"
-        android:visibility="visible"
+        android:visibility="invisible"
         android:background="@color/background_material_light"
         android:alpha="0.96">
 
