@@ -87,9 +87,6 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
 
         mDevice = new Device(mDeviceAddress, mDevicePasskey);
 
-        final TextView addressText = (TextView) findViewById(R.id.text_device_address);
-        addressText.setText(mDevice.getAddress());
-
         mTemperatureView = (TextView) findViewById(R.id.text_temperature);
         mTemperatureRangeMinView = (TextView) findViewById(R.id.text_temperature_min);
         mTemperatureRangeMaxView = (TextView) findViewById(R.id.text_temperature_max);
@@ -135,8 +132,8 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
         });
 
         // Bind temperature settings
-        final LinearLayout rangeGroup = (LinearLayout) findViewById(R.id.group_range);
-        rangeGroup.setOnClickListener(new View.OnClickListener() {
+        final ImageView configButton = (ImageView) findViewById(R.id.button_config);
+        configButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 showRangeConfigDialog();
@@ -597,6 +594,11 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
     }
 
+    /**
+     * We have a more icon, that contains two menu items:
+     * - menu_feedback: Go to the website, and allows user to leave comments
+     * - menu_new_device: Scan a new device
+     */
     @Override
     public boolean onMenuItemClick(MenuItem menuItem) {
         switch (menuItem.getItemId()) {

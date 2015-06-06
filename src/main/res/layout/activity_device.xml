@@ -1,153 +1,231 @@
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- divide the total height into two parts -->
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#ff2196F3"
     android:orientation="vertical">
 
-    <RelativeLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/group_title"
-            >
-        <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:text="@string/app_name"
-                android:id="@+id/text_app_name"
-                android:layout_centerHorizontal="true"
-                android:layout_marginTop="20dp"
-                android:textSize="16dp" />
+    <LinearLayout
+        android:weightSum="5"
+        android:orientation="vertical"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent">
 
-        <ImageView
+        <!-- for top 2/3 -->
+        <LinearLayout
+            android:id="@+id/group_header"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:orientation="vertical"
+            android:background="@color/primary"
+            android:layout_weight="2">
+
+            <RelativeLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_more_vert_white_24dp"
-                android:contentDescription="more"
-                android:layout_alignBottom="@id/text_app_name"
-                android:layout_alignParentRight="true"
-                android:layout_marginRight="10dp"
-                android:id="@+id/image_more"
+                android:id="@+id/group_title"
+                >
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:text="@string/app_name"
+                    android:id="@+id/text_app_name"
+                    android:textColor="@color/textPrimary"
+                    android:layout_centerHorizontal="true"
+                    android:layout_marginTop="20dp"
+                    android:textSize="20dp"/>
+
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_more_vert_white_24dp"
+                    android:contentDescription="more"
+                    android:layout_alignBottom="@id/text_app_name"
+                    android:layout_alignParentRight="true"
+                    android:id="@+id/image_more"
+                    android:paddingRight="10dp"/>
+            </RelativeLayout>
+
+            <!-- BIG current temperature display -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="60dp"
+                android:layout_marginBottom="40dp"
+                android:id="@+id/group_temperature"
+                >
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:text="26"
+                    android:textColor="@color/textPrimary"
+                    android:id="@+id/text_temperature"
+                    android:layout_centerHorizontal="true"
+                    android:textSize="108dp"
+                    />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=".7"
+                    android:textColor="@color/textPrimary"
+                    android:layout_toRightOf="@id/text_temperature"
+                    android:layout_alignBaseline="@+id/text_temperature"
+                    android:textSize="24dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="°C"
+                    android:textColor="@color/textPrimary"
+                    android:layout_toRightOf="@id/text_temperature"
+                    android:layout_alignTop="@+id/text_temperature"
+                    android:paddingTop="16dp"
+                    android:textSize="28dp"/>
+            </RelativeLayout>
+
+            <!-- wrappers for temperature range -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:id="@+id/group_range"
+                >
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:text="MIN: 26.0°C"
+                    android:typeface="monospace"
+                    android:id="@+id/text_temperature_min"
+                    android:textSize="12dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:text="MAX: 28.0°C"
+                    android:typeface="monospace"
+                    android:id="@+id/text_temperature_max"
+                    android:textSize="12dp"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <RelativeLayout
+            android:layout_width="fill_parent"
+            android:layout_height="55dp">
+
+            <ImageView
+                android:src="@drawable/icon_config_background_repeat"
+                android:layout_width="fill_parent"
+                android:scaleType="fitXY"
+                android:layout_height="55dp"/>
+
+            <ImageView
+                android:layout_width="55dp"
+                android:layout_height="55dp"
+                android:scaleType="fitXY"
+                android:src="@drawable/icon_config"
+                android:id="@+id/button_config"
+                android:layout_alignParentEnd="true"
                 />
-    </RelativeLayout>
+        </RelativeLayout>
 
-    <!-- BIG current temperature display -->
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/group_title"
-        android:layout_marginTop="60dp"
-        android:layout_marginBottom="40dp"
-        android:id="@+id/group_temperature"
-        >
+        <!-- the other part -->
+        <LinearLayout
+            android:layout_weight="3"
+            android:background="#ffffffff"
+            android:orientation="vertical"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:text="28"
-            android:id="@+id/text_temperature"
-            android:layout_centerHorizontal="true"
-            android:textSize="108dp"
-            />
+            <!-- wrapper for two buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_below="@id/group_temperature"
+                android:gravity="center_horizontal"
+                android:id="@+id/group_button"
+                android:layout_marginTop="30dp"
+                >
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="°C"
-            android:layout_toRightOf="@id/text_temperature"
-            android:layout_alignBaseline="@+id/text_temperature"
-            android:textSize="24dp" />
-    </RelativeLayout>
+                <!-- switch state toggle -->
+                <RelativeLayout android:layout_width="wrap_content"
+                                android:layout_height="wrap_content">
 
+                    <com.getswitchpal.android.ToggleButton
+                        android:layout_width="76dp"
+                        android:layout_height="76dp"
+                        android:textSize="16dp"
+                        android:id="@+id/button_switch"
+                        android:background="@drawable/switch_state_button"
+                        android:textOn=""
+                        android:textOff=""
+                        android:checked="true"
+                        />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="On"
+                        android:layout_marginTop="10dp"
+                        android:layout_below="@+id/button_switch"
+                        android:layout_centerHorizontal="true"
+                        />
+                </RelativeLayout>
 
-    <!-- wrapper for two buttons -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_below="@id/group_temperature"
-        android:gravity="center_horizontal"
-        android:id="@+id/group_button"
-        >
-        <!-- switch state toggle -->
-        <com.getswitchpal.android.ToggleButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="16dp"
-            android:id="@+id/button_switch"
-            android:layout_marginBottom="30dp"
-            android:textOn="On"
-            android:textOff="Off" android:checked="false"/>
+                <!-- control mode toggle -->
+                <RelativeLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="40dp"
+                    >
 
-        <com.getswitchpal.android.ToggleButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="16dp"
-            android:id="@+id/button_mode"
-            android:layout_marginBottom="30dp"
-            android:checked="true"
-            android:textOff="Manual"
-            android:textOn="Auto"
-            android:enabled="true" />
+                    <com.getswitchpal.android.ToggleButton
+                        android:layout_width="76dp"
+                        android:layout_height="76dp"
+                        android:textSize="16dp"
+                        android:id="@+id/button_mode"
+                        android:checked="false"
+                        android:textOff=""
+                        android:textOn=""
+                        android:background="@drawable/control_mode_button"
+                        android:enabled="true"
+                        />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Auto"
+                        android:layout_marginTop="10dp"
+                        android:layout_below="@+id/button_mode"
+                        android:layout_centerHorizontal="true"
+                        android:layout_gravity="center_horizontal"
+                        />
+                </RelativeLayout>
+            </LinearLayout>
 
-    </LinearLayout>
+            <!-- for debugging purpose -->
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Connect"
+                android:textSize="16dp"
+                android:id="@+id/button_connect"
+                android:layout_alignParentBottom="true"
+                android:layout_centerHorizontal="true"
+                android:visibility="invisible"
+                android:layout_marginBottom="30dp"/>
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/group_button"
-        android:gravity="center_horizontal"
-        android:id="@+id/group_range"
-        >
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:text="26°C"
-            android:id="@+id/text_temperature_min"
-            />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:text="/"
-            android:id="@+id/text_temperature_separator"
-            />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:text="28°C"
-            android:id="@+id/text_temperature_max"
-            />
-
+        </LinearLayout>
 
     </LinearLayout>
-
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Connect"
-        android:textSize="16dp"
-        android:id="@+id/button_connect"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="30dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:text="00:11:22:33:44:55"
-        android:id="@+id/text_device_address"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@id/button_connect"
-        android:textColor="#BBBBBB"
-        android:textSize="12dp" />
 
     <!-- when there is operation going on, add this overlay -->
     <RelativeLayout
@@ -156,7 +234,7 @@
         android:id="@+id/overlay_progress"
         android:visibility="invisible"
         android:background="@color/background_material_light"
-        android:alpha="0.96">
+        android:alpha="0.96" android:layout_alignParentEnd="false">
 
         <ProgressBar
             android:layout_width="wrap_content"

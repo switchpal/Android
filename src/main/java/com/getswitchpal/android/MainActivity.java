@@ -8,6 +8,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import com.parse.ParseAnalytics;
 
 /**
@@ -36,7 +37,7 @@ public class MainActivity extends Activity {
         }
 
         // get hold on the scan button
-        final Button scanButton = (Button) findViewById(R.id.button_scan);
+        final ImageView scanButton = (ImageView) findViewById(R.id.button_scan);
         scanButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
