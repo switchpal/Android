@@ -6,9 +6,12 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.bluetooth.*;
 import android.content.*;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.*;
 import com.parse.ParseAnalytics;
@@ -21,7 +24,7 @@ import java.util.UUID;
 /**
  * The activity that is used when a user has not connect to a device.
  */
-public class DeviceActivity extends Activity implements NumberPicker.OnValueChangeListener {
+public class DeviceActivity extends Activity implements NumberPicker.OnValueChangeListener, PopupMenu.OnMenuItemClickListener {
 
     private static final int REQUEST_ENABLE_BLUETOOTH = 1;
     private final static String TAG = DeviceActivity.class.getSimpleName();
@@ -110,6 +113,17 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
             }
         });
 
+
+        final ImageView moreView = (ImageView) findViewById(R.id.image_more);
+        moreView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                PopupMenu popup = new PopupMenu(DeviceActivity.this, view);
+                popup.setOnMenuItemClickListener(DeviceActivity.this);
+                popup.inflate(R.menu.more);
+                popup.show();
+            }
+        });
 
         // get hold on the scan button
         final Button connectButton = (Button) findViewById(R.id.button_connect);
@@ -581,5 +595,23 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
      */
     @Override
     public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
+    }
+
+    @Override
+    public boolean onMenuItemClick(MenuItem menuItem) {
+        switch (menuItem.getItemId()) {
+            case R.id.menu_feedback:
+                Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("http://getswitchpal.com/"));
+                startActivity(i);
+                return true;
+
+            case R.id.menu_new_device:
+                Intent intent = new Intent(this, QRScanActivity.class);
+                startActivity(intent);
+                return true;
+
+            default:
+                return false;
+        }
     }
 }

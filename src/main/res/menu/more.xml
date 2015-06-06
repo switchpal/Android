@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_new_device"
+        android:title="User a new device"
+        android:orderInCategory="1"/>
+    <item
+        android:id="@+id/menu_feedback"
+        android:title="Feedback"
+        android:orderInCategory="100"/>
+</menu>
