@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -23,7 +24,7 @@ public class MainActivity extends Activity {
         // set the layout
         setContentView(R.layout.activity_main);
 
-        SharedPreferences sharedPref = getPreferences(MODE_PRIVATE);
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         Device device = Device.getDeviceFromSharedPreferences(sharedPref);
         if (device != null) {
             startDeviceActivity();

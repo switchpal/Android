@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 
+import android.preference.PreferenceManager;
 import android.view.View;
 import android.widget.Toast;
 import com.google.zxing.BarcodeFormat;
@@ -65,7 +66,7 @@ public class QRScanActivity extends Activity implements ZXingScannerView.ResultH
                     "address = " + device.getAddress() + ", passkey = " + device.getPasskey(),
                     Toast.LENGTH_SHORT).show();
 
-            SharedPreferences sharedPref = getPreferences(MODE_PRIVATE);
+            SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
             device.writeSharedPreferences(sharedPref);
 
             Intent intent = new Intent(QRScanActivity.this, DeviceActivity.class);

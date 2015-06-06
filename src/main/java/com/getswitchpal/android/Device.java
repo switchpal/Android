@@ -194,7 +194,11 @@ public class Device {
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putString(PREF_ADDRESS, getAddress());
         editor.putString(PREF_PASSKEY, getPasskey());
-        editor.apply();
+        if (!editor.commit()) {
+            Log.e(TAG, "Error writing SharedPreferences file");
+        } else {
+            Log.d(TAG, "Device information saved");
+        }
     }
 
     /**
