@@ -48,6 +48,8 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     private TextView mTemperatureRangeMaxView;
     private ToggleButton mSwitchStateToggle;
     private ToggleButton mControlModeToggle;
+    private TextView mSwitchStateView;
+    private TextView mControlModeView;
 
     private RelativeLayout mProgressOverlay;
     private ProgressBar mProgressBar;
@@ -92,6 +94,8 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
         mTemperatureRangeMaxView = (TextView) findViewById(R.id.text_temperature_max);
         mSwitchStateToggle = (ToggleButton) findViewById(R.id.button_switch);
         mControlModeToggle = (ToggleButton) findViewById(R.id.button_mode);
+        mSwitchStateView = (TextView) findViewById(R.id.text_state);
+        mControlModeView = (TextView) findViewById(R.id.text_mode);
 
         mProgressOverlay = (RelativeLayout) findViewById(R.id.overlay_progress);
         mProgressTextView = (TextView) findViewById(R.id.text_progress);
@@ -334,11 +338,24 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
                 mTemperatureRangeMinView.setText(String.format("%.1f", mDevice.getTemperatureRangeMin()));
                 mTemperatureRangeMaxView.setText(String.format("%.1f", mDevice.getTemperatureRangeMax()));
 
-                if (mDevice.getSwitchState().isValid()) {
-                    mSwitchStateToggle.setChecked(mDevice.getSwitchState().toBoolean());
+                Device.SwitchState state = mDevice.getSwitchState();
+                if (state.isValid()) {
+                    mSwitchStateToggle.setChecked(state.toBoolean());
+                    if (state.toBoolean()) {
+                        mSwitchStateView.setText("On");
+                    } else {
+                        mSwitchStateView.setText("Off");
+                    }
                 }
-                if (mDevice.getControlMode().isValid()) {
-                    mControlModeToggle.setChecked(mDevice.getControlMode().toBoolean());
+
+                Device.ControlMode mode = mDevice.getControlMode();
+                if (mode.isValid()) {
+                    mControlModeToggle.setChecked(mode.toBoolean());
+                    if (mode.toBoolean()) {
+                        mControlModeView.setText("Auto");
+                    } else {
+                        mControlModeView.setText("Manual");
+                    }
                 }
 
                 // since the view is updated, remove ProgressBar
