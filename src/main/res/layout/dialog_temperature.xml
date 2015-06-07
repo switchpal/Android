@@ -7,42 +7,75 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_horizontal"
-        android:layout_marginBottom="20dp"
+        android:orientation="vertical"
         >
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_marginRight="5dp"
-            android:gravity="center_vertical"
-            android:text="Min:"
-            />
-
-        <NumberPicker
-            android:id="@+id/picker_temp_min"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            />
+            android:orientation="horizontal"
+            >
+            <TextView
+                android:layout_width="40dp"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:text="Min:"
+                />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_marginLeft="20dp"
-            android:layout_marginRight="5dp"
-            android:gravity="center_vertical"
-            android:text="Max:"
-            />
+            <SeekBar
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="40dp"
+                android:id="@+id/slider_temperature_range_min"
+                android:max="30"
+                android:progress="26"
+                android:indeterminate="false"/>
 
-        <NumberPicker
-            android:id="@+id/picker_temp_max"
-            android:layout_width="wrap_content"
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:id="@+id/text_temperature_range_min"
+                android:layout_marginLeft="-40dp"
+                android:text="26.0"
+                />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            />
+            android:orientation="horizontal"
+            >
+            <TextView
+                android:layout_width="40dp"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:text="Max:"
+                />
+
+            <SeekBar
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="40dp"
+                android:id="@+id/slider_temperature_range_max"
+                android:layout_gravity="center_horizontal" android:max="30" android:progress="28"
+                android:indeterminate="false"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_marginLeft="-40dp"
+                android:gravity="center_vertical"
+                android:id="@+id/text_temperature_range_max"
+                android:text="28.0"
+                />
+
+        </LinearLayout>
+
     </LinearLayout>
 
     <!-- wrap two buttons in a row -->
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
