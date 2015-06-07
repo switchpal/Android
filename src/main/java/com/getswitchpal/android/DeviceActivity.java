@@ -1,6 +1,5 @@
 package com.getswitchpal.android;
 
-import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -10,7 +9,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.*;
@@ -23,7 +21,7 @@ import java.util.*;
  *
  *
  */
-public class DeviceActivity extends Activity implements NumberPicker.OnValueChangeListener, PopupMenu.OnMenuItemClickListener {
+public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClickListener {
 
     private static final int REQUEST_ENABLE_BLUETOOTH = 1;
     private final static String TAG = DeviceActivity.class.getSimpleName();
@@ -46,7 +44,8 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
     private Device mDevice;
 
     // views
-    private TextView mTemperatureView;
+    private TextView mTemperatureIntegerView;
+    private TextView mTemperatureFractionalView;
     private TextView mTemperatureRangeMinView;
     private TextView mTemperatureRangeMaxView;
     private ToggleButton mSwitchStateToggle;
@@ -95,7 +94,8 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
 
         mDevice = new Device(mDeviceAddress, mDevicePasskey);
 
-        mTemperatureView = (TextView) findViewById(R.id.text_temperature);
+        mTemperatureIntegerView = (TextView) findViewById(R.id.text_temperature_integer);
+        mTemperatureFractionalView = (TextView) findViewById(R.id.text_temperature_fractional);
         mTemperatureRangeMinView = (TextView) findViewById(R.id.text_temperature_min);
         mTemperatureRangeMaxView = (TextView) findViewById(R.id.text_temperature_max);
         mSwitchStateToggle = (ToggleButton) findViewById(R.id.button_switch);
@@ -383,9 +383,10 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mTemperatureView.setText(String.format("%.1f", mDevice.getTemperature()));
-                mTemperatureRangeMinView.setText(String.format("%.1f", mDevice.getTemperatureRangeMin()));
-                mTemperatureRangeMaxView.setText(String.format("%.1f", mDevice.getTemperatureRangeMax()));
+                mTemperatureIntegerView.setText(String.format("%d", (int)mDevice.getTemperature()));
+                mTemperatureFractionalView.setText(String.format(".%d", (int)((mDevice.getTemperature() - (int)mDevice.getTemperature())*10)));
+                mTemperatureRangeMinView.setText(String.format("MIN: %.1f", mDevice.getTemperatureRangeMin()));
+                mTemperatureRangeMaxView.setText(String.format("MAX: %.1f", mDevice.getTemperatureRangeMax()));
 
                 Device.SwitchState state = mDevice.getSwitchState();
                 if (state.isValid()) {
@@ -419,28 +420,73 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
         dialog.setContentView(R.layout.dialog_temperature);
 
         // the values that can be selected by user, between 24 to 30
-        ArrayList<String> values = new ArrayList<>();
+        final ArrayList<String> values = new ArrayList<>();
         for (float temp = 24; temp < 30.1; temp += 0.1) {
             values.add(String.format("%2.1f", temp));
         }
-        final String[] displayedValues = values.toArray(new String[values.size()]);
 
-        // setup min temperature
-        final NumberPicker minTempPicker = (NumberPicker) dialog.findViewById(R.id.picker_temp_min);
-        minTempPicker.setDisplayedValues(displayedValues);
-        minTempPicker.setMaxValue(displayedValues.length - 1);
-        minTempPicker.setMinValue(0);
-        minTempPicker.setValue(40);
-        minTempPicker.setWrapSelectorWheel(false);
-        minTempPicker.setOnValueChangedListener(DeviceActivity.this);
+        final SeekBar minTemperatureBar = (SeekBar) dialog.findViewById(R.id.slider_temperature_range_min);
+        final TextView minTemperatureView = (TextView) dialog.findViewById(R.id.text_temperature_range_min);
+        final SeekBar maxTemperatureBar = (SeekBar) dialog.findViewById(R.id.slider_temperature_range_max);
+        final TextView maxTemperatureView = (TextView) dialog.findViewById(R.id.text_temperature_range_max);
+        minTemperatureBar.setMax(values.size() - 1);
+        maxTemperatureBar.setMax(values.size() - 1);
 
-        final NumberPicker maxTempPicker = (NumberPicker) dialog.findViewById(R.id.picker_temp_max);
-        maxTempPicker.setDisplayedValues(displayedValues);
-        maxTempPicker.setMaxValue(displayedValues.length - 1);
-        maxTempPicker.setMinValue(0);
-        maxTempPicker.setValue(40);
-        maxTempPicker.setWrapSelectorWheel(false);
-        maxTempPicker.setOnValueChangedListener(DeviceActivity.this);
+        int minProgress = values.indexOf(String.format("%2.1f", mDevice.getTemperatureRangeMin()));
+        if (minProgress == -1) {
+            minProgress = 0;
+        }
+        int maxProgress = values.indexOf(String.format("%2.1f", mDevice.getTemperatureRangeMax()));
+        if (maxProgress == -1) {
+            maxProgress = 10;
+        }
+
+        minTemperatureBar.setProgress(minProgress);
+        maxTemperatureBar.setProgress(maxProgress);
+        minTemperatureView.setText(values.get(minTemperatureBar.getProgress()));
+        maxTemperatureView.setText(values.get(maxTemperatureBar.getProgress()));
+
+        final SeekBar.OnSeekBarChangeListener onSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                String text = values.get(seekBar.getProgress());
+                float min = Float.parseFloat(values.get(minTemperatureBar.getProgress()));
+                float max = Float.parseFloat(values.get(maxTemperatureBar.getProgress()));
+                float diff = max - min;
+
+                if (seekBar == minTemperatureBar) {
+                    minTemperatureView.setText(text);
+                    // if min is greater than max, adjust max
+                    if (diff < 1) {
+                        if (maxTemperatureBar.getProgress() == maxTemperatureBar.getMax()) {
+                            minTemperatureBar.setProgress(maxTemperatureBar.getMax() - 10);
+                        } else {
+                            maxTemperatureBar.setProgress(minTemperatureBar.getProgress() + 10);
+                        }
+                    }
+                } else if (seekBar == maxTemperatureBar) {
+                    maxTemperatureView.setText(text);
+                    // if max is lower than min, adjust min
+                    if (diff < 1) {
+                        if (minTemperatureBar.getProgress() == 0) {
+                            maxTemperatureBar.setProgress(10);
+                        } else {
+                            minTemperatureBar.setProgress(maxTemperatureBar.getProgress() - 10);
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        };
+        minTemperatureBar.setOnSeekBarChangeListener(onSeekBarChangeListener);
+        maxTemperatureBar.setOnSeekBarChangeListener(onSeekBarChangeListener);
 
         // setup button
         Button confirmButton = (Button) dialog.findViewById(R.id.button_confirm);
@@ -449,8 +495,8 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
             @Override
             public void onClick(View v) {
                 //tv.setText(String.valueOf(np.getValue())); //set the value to textview
-                float min = Float.parseFloat(displayedValues[minTempPicker.getValue()]);
-                float max = Float.parseFloat(displayedValues[maxTempPicker.getValue()]);
+                float min = Float.parseFloat(values.get(minTemperatureBar.getProgress()));
+                float max = Float.parseFloat(values.get(maxTemperatureBar.getProgress()));
                 setTemperatureRange(min, max);
                 dialog.dismiss();
             }
@@ -651,17 +697,6 @@ public class DeviceActivity extends Activity implements NumberPicker.OnValueChan
                 doubleBackToExitPressedOnce = false;
             }
         }, 2000);
-    }
-
-    /**
-     * Temperature settings
-     *
-     * @param picker
-     * @param oldVal
-     * @param newVal
-     */
-    @Override
-    public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
     }
 
     /**
