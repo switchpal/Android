@@ -497,7 +497,9 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
                 //tv.setText(String.valueOf(np.getValue())); //set the value to textview
                 float min = Float.parseFloat(values.get(minTemperatureBar.getProgress()));
                 float max = Float.parseFloat(values.get(maxTemperatureBar.getProgress()));
-                setTemperatureRange(min, max);
+                if ((Math.abs(min - mDevice.getTemperatureRangeMin()) > 0.1) || (Math.abs(max - mDevice.getTemperatureRangeMax()) > 0.1)) {
+                    setTemperatureRange(min, max);
+                }
                 dialog.dismiss();
             }
         });
