@@ -225,19 +225,21 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
                 // Attempts to discover services after successful connection.
                 mBluetoothGatt.discoverServices();
                 Log.i("AFTER DISCOVER SERVICES", "OK");
-
-
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        startRepeatingTask();
-                    }
-                });
-
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 Log.i("STATE DISCONNECTED", "OK");
                 Log.i(TAG, "Disconnected from GATT server.");
             }
+        }
+
+        @Override
+        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            super.onServicesDiscovered(gatt, status);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    startRepeatingTask();
+                }
+            });
         }
 
         @Override
@@ -335,21 +337,89 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
         }
 
         if (mBluetoothGatt == null) {
-            final BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(mDevice.getAddress());
-            if (device == null) {
-                Log.w(TAG, "Device not found. Unable to connect.");
-                return;
+
+            boolean foundInExistingPairedDevices = false;
+            Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+            if (pairedDevices.size() > 0) {
+                for (BluetoothDevice d: pairedDevices) {
+                    if (d.getAddress().equals(mDevice.getAddress())) {
+                        foundInExistingPairedDevices = true;
+                        connectDevice(d);
+                        break;
+                    }
+                }
             }
-            // We want to directly connect to the device, so we are setting the autoConnect
-            // parameter to false.
-            mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
-            if (mBluetoothGatt == null) {
-                Toast.makeText(this, "device.connectGatt returns null", Toast.LENGTH_LONG).show();
-                return;
+            // not found, lets start a scanning
+            // Register the BroadcastReceiver
+            if (!foundInExistingPairedDevices) {
+
+                // Stops scanning after a pre-defined scan period.
+                mHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (mScanning) {
+                            mScanning = false;
+                            if (mBluetoothAdapter != null) {
+                                mBluetoothAdapter.stopLeScan(mLeScanCallback);
+                            }
+                        }
+                    }
+                }, SCAN_PERIOD);
+
+                mScanning = true;
+                mBluetoothAdapter.startLeScan(mLeScanCallback);
+                showProgress("Scanning devices");
             }
-            showProgress("Connecting to your SwitchPal device");
         }
     }
+
+    private static boolean mScanning = false;
+    private static final long SCAN_PERIOD = 10000;
+
+    // Device scan callback.
+    private BluetoothAdapter.LeScanCallback mLeScanCallback =
+            new BluetoothAdapter.LeScanCallback() {
+                @Override
+                public void onLeScan(final BluetoothDevice device, int rssi,
+                                     byte[] scanRecord) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (device.getAddress().equals(mDevice.getAddress())) {
+                                mScanning = false;
+                                mBluetoothAdapter.stopLeScan(mLeScanCallback);
+                                hideProgress();
+
+                                connectDevice(device);
+                            }
+                        }
+                    });
+                }
+            };
+
+    /**
+     * We may comes here by two ways:
+     * - we found the device has been paired before, so no scanning is involved
+     * - we found the device by scanning
+     *
+     * @param device
+     */
+    private void connectDevice(BluetoothDevice device) {
+        Log.d(TAG, "Connecting to the device");
+        if (device == null) {
+            Log.w(TAG, "Device not found. Unable to connect.");
+            return;
+        }
+        // We want to directly connect to the device, so we are setting the autoConnect
+        // parameter to false.
+        mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
+        if (mBluetoothGatt == null) {
+            Toast.makeText(this, "device.connectGatt returns null", Toast.LENGTH_LONG).show();
+            return;
+        }
+        showProgress("Connecting to your SwitchPal device");
+    }
+
 
     @Override
     protected void onPause() {
@@ -383,8 +453,8 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mTemperatureIntegerView.setText(String.format("%d", (int)mDevice.getTemperature()));
-                mTemperatureFractionalView.setText(String.format(".%d", (int)((mDevice.getTemperature() - (int)mDevice.getTemperature())*10)));
+                mTemperatureIntegerView.setText(String.format("%d", (int) mDevice.getTemperature()));
+                mTemperatureFractionalView.setText(String.format(".%d", (int) ((mDevice.getTemperature() - (int) mDevice.getTemperature()) * 10)));
                 mTemperatureRangeMinView.setText(String.format("MIN: %.1f", mDevice.getTemperatureRangeMin()));
                 mTemperatureRangeMaxView.setText(String.format("MAX: %.1f", mDevice.getTemperatureRangeMax()));
 
