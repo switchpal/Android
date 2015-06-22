@@ -5,7 +5,9 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.bluetooth.*;
 import android.content.*;
+import android.media.AsyncPlayer;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -588,21 +590,45 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
 
     /**
      * Add a overlay showing an operation is in progress
+     *
+     * The progress overlay is only displayed if the operation did not finish in 1 seconds
      */
     private void showProgress(String text) {
-        final String displayText;
+        String displayText;
         if (text == null) {
             displayText = "";
         } else {
             displayText = text;
         }
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mProgressTextView.setText(displayText);
-                mProgressOverlay.setVisibility(View.VISIBLE);
+        new ShowProgressTaskForLongOperations().doInBackground(displayText);
+    }
+
+    /**
+     * Background task to show progress overlay for long-running operations
+     */
+    private class ShowProgressTaskForLongOperations extends AsyncTask<String, Void, Void> {
+        @Override
+        protected void onPreExecute() {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-        });
+        }
+
+        @Override
+        protected Void doInBackground(String... texts) {
+            Log.d(TAG, "showing progress dialog in background thread");
+            final String displayText = texts[0];
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mProgressTextView.setText(displayText);
+                    mProgressOverlay.setVisibility(View.VISIBLE);
+                }
+            });
+            return null;
+        }
     }
 
     /**
