@@ -11,6 +11,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.*;
@@ -59,6 +60,8 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
     private ToggleButton mControlModeToggle;
     private TextView mSwitchStateView;
     private TextView mControlModeView;
+
+    private ImageView moreView;
 
     private RelativeLayout mProgressOverlay;
     private ProgressBar mProgressBar;
@@ -129,7 +132,7 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
 
         mHandler = new Handler();
 
-        final ImageView moreView = (ImageView) findViewById(R.id.image_more);
+        moreView = (ImageView) findViewById(R.id.image_more);
         moreView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -861,5 +864,14 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
             default:
                 return false;
         }
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_MENU) {
+            moreView.performClick();
+            return true;
+        }
+        return super.onKeyUp(keyCode, event);
     }
 }
