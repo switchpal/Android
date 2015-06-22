@@ -256,6 +256,16 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
                 public void run() {
                     hideProgress();
                     mDevice.setIsConnected(true);
+
+                    // enable notification, we need to wait the first characteristic to finish and then request to
+                    // enable the second characteristic
+                    enableNotification(Device.UUID_CHARACTERISTIC_SWITCH_STATE);
+                    mHandler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            enableNotification(Device.UUID_CHARACTERISTIC_CONTROL_MODE);
+                        }
+                    }, 5000);
                     startRepeatingTask();
                 }
             });
@@ -322,11 +332,39 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
             }
         }
 
+        /**
+         * Respond to notifications from the device
+         */
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
+            byte[] data = characteristic.getValue();
+            String uuid = characteristic.getUuid().toString();
+
+            Log.i(TAG, "receive notification from device, uuid:" + uuid);
+            switch (uuid) {
+                case Device.UUID_CHARACTERISTIC_SWITCH_STATE:
+                    mDevice.setSwitchState(data);
+                    Log.i(TAG, "Switch State is:" + mDevice.getSwitchState());
+                    break;
+                case Device.UUID_CHARACTERISTIC_CONTROL_MODE:
+                    mDevice.setControlMode(data);
+                    Log.i(TAG, "Control Mode is:" + mDevice.getControlMode());
+                    break;
+                default:
+                    Log.i(TAG, "unknown UUID: " + uuid);
+            }
+            updateView();
         }
     };
+
+    private void enableNotification(String uuid) {
+        BluetoothGattCharacteristic characteristic = getCharacteristic(uuid);
+        mBluetoothGatt.setCharacteristicNotification(characteristic, true);
+        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"));
+        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+        mBluetoothGatt.writeDescriptor(descriptor);
+    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -866,6 +904,9 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
         }
     }
 
+    /**
+     * Respond to physical menu button click
+     */
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_MENU) {
