@@ -1,5 +1,6 @@
 package com.getswitchpal.android;
 
+import com.getswitchpal.android.utils.Device;
 import junit.framework.TestCase;
 
 /**

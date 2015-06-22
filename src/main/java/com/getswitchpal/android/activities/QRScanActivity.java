@@ -1,4 +1,4 @@
-package com.getswitchpal.android;
+package com.getswitchpal.android.activities;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.view.View;
 import android.widget.Toast;
+import com.getswitchpal.android.utils.Device;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.Result;
 

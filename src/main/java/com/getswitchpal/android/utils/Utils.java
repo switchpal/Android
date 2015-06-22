@@ -1,4 +1,4 @@
-package com.getswitchpal.android;
+package com.getswitchpal.android.utils;
 
 import android.net.Uri;
 import android.util.Base64;

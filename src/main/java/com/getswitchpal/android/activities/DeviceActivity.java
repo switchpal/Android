@@ -1,11 +1,11 @@
-package com.getswitchpal.android;
+package com.getswitchpal.android.activities;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.DialogFragment;
 import android.bluetooth.*;
 import android.content.*;
-import android.media.AsyncPlayer;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -14,6 +14,10 @@ import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.*;
+import com.getswitchpal.android.*;
+import com.getswitchpal.android.dialogs.BluetoothScanFailedDialog;
+import com.getswitchpal.android.utils.Device;
+import com.getswitchpal.android.widgets.ToggleButton;
 import com.parse.ParseAnalytics;
 
 import java.util.*;
@@ -44,6 +48,7 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
 
     // the device
     private Device mDevice;
+    private BluetoothDevice mBluetoothDevice;
 
     // views
     private TextView mTemperatureIntegerView;
@@ -62,8 +67,8 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
     // double back to exit
     private boolean doubleBackToExitPressedOnce = false;
 
-    // we need to update Device info periodically, every 7 seconds
-    private int mInterval = 7000;
+    // we need to update Device info periodically, every 15 seconds
+    private int mInterval = 15000;
     private Handler mHandler;
 
     // when requesting Device info periodically, we need to request characteristics one by one
@@ -100,7 +105,7 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
         mTemperatureFractionalView = (TextView) findViewById(R.id.text_temperature_fractional);
         mTemperatureRangeMinView = (TextView) findViewById(R.id.text_temperature_min);
         mTemperatureRangeMaxView = (TextView) findViewById(R.id.text_temperature_max);
-        mSwitchStateToggle = (ToggleButton) findViewById(R.id.button_switch);
+        mSwitchStateToggle = (com.getswitchpal.android.widgets.ToggleButton) findViewById(R.id.button_switch);
         mControlModeToggle = (ToggleButton) findViewById(R.id.button_mode);
         mSwitchStateView = (TextView) findViewById(R.id.text_state);
         mControlModeView = (TextView) findViewById(R.id.text_mode);
@@ -178,9 +183,9 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
             if (!mHasInitialized) {
                 mHasInitialized = true;
                 // queue all the readable info
-                queuedReadCharacteristicUuids.push(SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE);
-                queuedReadCharacteristicUuids.push(SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE);
-                queuedReadCharacteristicUuids.push(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE);
+                queuedReadCharacteristicUuids.push(Device.UUID_CHARACTERISTIC_CONTROL_MODE);
+                queuedReadCharacteristicUuids.push(Device.UUID_CHARACTERISTIC_SWITCH_STATE);
+                queuedReadCharacteristicUuids.push(Device.UUID_CHARACTERISTIC_TEMPERATURE_RANGE);
 
                 //queuedReadCharacteristicUuids.push(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE);
                 requestTemperature();
@@ -221,15 +226,22 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
             //    }
             //});
 
-            if (newState == BluetoothProfile.STATE_CONNECTED) {
-                hideProgress();
-                Log.i("STATE CONNECTED", "OK");
-                // Attempts to discover services after successful connection.
-                mBluetoothGatt.discoverServices();
-                Log.i("AFTER DISCOVER SERVICES", "OK");
-            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                Log.i("STATE DISCONNECTED", "OK");
-                Log.i(TAG, "Disconnected from GATT server.");
+            switch (newState) {
+                case BluetoothProfile.STATE_CONNECTED:
+                    hideProgress();
+                    Log.i(TAG, "STATE CONNECTED");
+                    // Attempts to discover services after successful connection.
+                    mBluetoothGatt.discoverServices();
+                    // before the services is discovered, we should not allow user to interact with the device
+                    showProgress("Checking remote devices");
+                    break;
+                case BluetoothProfile.STATE_DISCONNECTED:
+                    Log.i(TAG, "Disconnected from GATT server.");
+                    mDevice.setIsConnected(false);
+
+                    showProgress("Reconnecting to device");
+                    connectDevice(mBluetoothDevice);
+                    break;
             }
         }
 
@@ -239,6 +251,8 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    hideProgress();
+                    mDevice.setIsConnected(true);
                     startRepeatingTask();
                 }
             });
@@ -252,19 +266,19 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
                 byte[] data = characteristic.getValue();
                 String uuid = characteristic.getUuid().toString();
                 switch (uuid) {
-                    case SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE:
+                    case Device.UUID_CHARACTERISTIC_SWITCH_STATE:
                         mDevice.setSwitchState(data);
                         Log.i(TAG, "Switch State is:" + mDevice.getSwitchState());
                         break;
-                    case SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE:
+                    case Device.UUID_CHARACTERISTIC_CONTROL_MODE:
                         mDevice.setControlMode(data);
                         Log.i(TAG, "Control Mode is:" + mDevice.getControlMode());
                         break;
-                    case SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE:
+                    case Device.UUID_CHARACTERISTIC_TEMPERATURE:
                         mDevice.setTemperature(data);
                         Log.i(TAG, "Temperature is: " + mDevice.getTemperature());
                         break;
-                    case SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE:
+                    case Device.UUID_CHARACTERISTIC_TEMPERATURE_RANGE:
                         mDevice.setTemperatureRange(data);
                         Log.i(TAG, "Temperature Range: min=" + mDevice.getTemperatureRangeMin() + ", max=" + mDevice.getTemperatureRangeMax());
                         break;
@@ -286,15 +300,15 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
 
                 Log.i(TAG, "data written intent:" + uuid);
                 switch (uuid) {
-                    case SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE:
+                    case Device.UUID_CHARACTERISTIC_SWITCH_STATE:
                         mDevice.setSwitchState(data);
                         Log.i(TAG, "Switch State is:" + mDevice.getSwitchState());
                         break;
-                    case SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE:
+                    case Device.UUID_CHARACTERISTIC_CONTROL_MODE:
                         mDevice.setControlMode(data);
                         Log.i(TAG, "Control Mode is:" + mDevice.getControlMode());
                         break;
-                    case SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE:
+                    case Device.UUID_CHARACTERISTIC_TEMPERATURE_RANGE:
                         mDevice.setTemperatureRange(data);
                         Log.i(TAG, "Temperature Range: min=" + mDevice.getTemperatureRangeMin() + ", max=" + mDevice.getTemperatureRangeMax());
                         break;
@@ -364,6 +378,8 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
                             if (mBluetoothAdapter != null) {
                                 mBluetoothAdapter.stopLeScan(mLeScanCallback);
                             }
+                            DialogFragment dialog = new BluetoothScanFailedDialog();
+                            dialog.show(getFragmentManager(), TAG);
                         }
                     }
                 }, SCAN_PERIOD);
@@ -397,14 +413,14 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
                         }
                     });
                 }
+
+
             };
 
     /**
      * We may comes here by two ways:
      * - we found the device has been paired before, so no scanning is involved
      * - we found the device by scanning
-     *
-     * @param device
      */
     private void connectDevice(BluetoothDevice device) {
         Log.d(TAG, "Connecting to the device");
@@ -412,8 +428,9 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
             Log.w(TAG, "Device not found. Unable to connect.");
             return;
         }
-        // We want to directly connect to the device, so we are setting the autoConnect
-        // parameter to false.
+
+        mBluetoothDevice = device;
+        // We want to directly connect to the device, so we are setting the autoConnect parameter to false.
         mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
         if (mBluetoothGatt == null) {
             Toast.makeText(this, "device.connectGatt returns null", Toast.LENGTH_LONG).show();
@@ -588,6 +605,8 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
         return mProgressOverlay.getVisibility() == View.VISIBLE;
     }
 
+    ShowProgressTaskForLongOperations showProgressTaskForLongOperationsTask = null;
+
     /**
      * Add a overlay showing an operation is in progress
      *
@@ -600,7 +619,8 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
         } else {
             displayText = text;
         }
-        new ShowProgressTaskForLongOperations().doInBackground(displayText);
+        showProgressTaskForLongOperationsTask = new ShowProgressTaskForLongOperations();
+        showProgressTaskForLongOperationsTask.doInBackground(displayText);
     }
 
     /**
@@ -620,13 +640,21 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
         protected Void doInBackground(String... texts) {
             Log.d(TAG, "showing progress dialog in background thread");
             final String displayText = texts[0];
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mProgressTextView.setText(displayText);
-                    mProgressOverlay.setVisibility(View.VISIBLE);
-                }
-            });
+            // check if the task has been cancelled
+            if (!isCancelled()) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mProgressTextView.setText(displayText);
+                        mProgressOverlay.setVisibility(View.VISIBLE);
+                    }
+                });
+            }
+
+            // lets double check
+            if (isCancelled()) {
+                hideProgress();
+            }
             return null;
         }
     }
@@ -635,6 +663,11 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
      * Remove the overlay
      */
     private void hideProgress() {
+        if (showProgressTaskForLongOperationsTask != null) {
+            showProgressTaskForLongOperationsTask.cancel(true);
+            showProgressTaskForLongOperationsTask = null;
+        }
+
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -644,11 +677,16 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
     }
 
     private BluetoothGattCharacteristic getCharacteristic(String uuid) {
-        return mBluetoothGatt.getService(UUID.fromString(SwitchPal.UUID_SERVICE)).getCharacteristic(UUID.fromString(uuid));
+        BluetoothGattService service = mBluetoothGatt.getService(UUID.fromString(Device.UUID_SERVICE));
+        return service.getCharacteristic(UUID.fromString(uuid));
     }
 
     private void requestReadCharacteristic(String uuid) {
         //showProgress("Communicating with your SwitchPal Device");
+        if (!mDevice.isConnected()) {
+            Toast.makeText(this, "Device is disconnected, unable to command", Toast.LENGTH_LONG).show();
+            return;
+        }
 
         if (mBluetoothGatt == null) {
             Log.e(TAG, "mBluetoothGatt is nul");
@@ -659,6 +697,11 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
     }
 
     private void requestWriteCharacteristic(String uuid, byte[] data) {
+        if (!mDevice.isConnected()) {
+            Toast.makeText(this, "Device is disconnected, unable to command", Toast.LENGTH_LONG).show();
+            return;
+        }
+
         showProgress("Commanding your SwitchPal Device");
 
         if (mBluetoothGatt == null) {
@@ -676,14 +719,14 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
      */
     private void requestTemperature() {
         // temperature characteristic
-        requestReadCharacteristic(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE);
+        requestReadCharacteristic(Device.UUID_CHARACTERISTIC_TEMPERATURE);
     }
 
     /**
      * Read current temperature from the device
      */
     private void requestTemperatureRange() {
-        requestReadCharacteristic(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE);
+        requestReadCharacteristic(Device.UUID_CHARACTERISTIC_TEMPERATURE_RANGE);
     }
 
     /**
@@ -713,14 +756,14 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
         data[2] = (byte) ((int) max);
         data[3] = (byte) ((max - (int) max) * 100);
 
-        requestWriteCharacteristic(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE_RANGE, data);
+        requestWriteCharacteristic(Device.UUID_CHARACTERISTIC_TEMPERATURE_RANGE, data);
     }
 
     /**
      * Get current control mode from the device
      */
     private void requestControlMode() {
-        requestReadCharacteristic(SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE);
+        requestReadCharacteristic(Device.UUID_CHARACTERISTIC_CONTROL_MODE);
     }
 
     private void setControlMode(Device.ControlMode mode) {
@@ -738,7 +781,7 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
 
         byte[] data = new byte[1];
         data[0] = mode.toByte();
-        requestWriteCharacteristic(SwitchPal.UUID_CHARACTERISTIC_CONTROL_MODE, data);
+        requestWriteCharacteristic(Device.UUID_CHARACTERISTIC_CONTROL_MODE, data);
     }
 
     private void toggleControlMode() {
@@ -749,7 +792,7 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
      * Get current switch state from the device
      */
     private void requestSwitchState() {
-        requestReadCharacteristic(SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE);
+        requestReadCharacteristic(Device.UUID_CHARACTERISTIC_SWITCH_STATE);
     }
 
     private void setSwitchState(Device.SwitchState state) {
@@ -767,7 +810,7 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
 
         byte[] data = new byte[1];
         data[0] = state.toByte();
-        requestWriteCharacteristic(SwitchPal.UUID_CHARACTERISTIC_SWITCH_STATE, data);
+        requestWriteCharacteristic(Device.UUID_CHARACTERISTIC_SWITCH_STATE, data);
     }
 
     private void toggleSwitchState() {

@@ -1,6 +1,5 @@
-package com.getswitchpal.android;
+package com.getswitchpal.android.utils;
 
-import android.app.Activity;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.util.Base64;
@@ -12,6 +11,17 @@ import java.util.Locale;
  * Wrap information about a SwitchPal device
  */
 public class Device {
+
+    // service UUID
+    public static final String UUID_SERVICE = "0000fff0-0000-1000-8000-00805f9b34fb";
+    // the switch state, read and write
+    public static final String UUID_CHARACTERISTIC_SWITCH_STATE = "0000fff1-0000-1000-8000-00805f9b34fb";
+    // the control mode, read and write
+    public static final String UUID_CHARACTERISTIC_CONTROL_MODE = "0000fff2-0000-1000-8000-00805f9b34fb";
+    // the current temperature, read only
+    public static final String UUID_CHARACTERISTIC_TEMPERATURE = "0000fff3-0000-1000-8000-00805f9b34fb";
+    // temperature range, read and write
+    public static final String UUID_CHARACTERISTIC_TEMPERATURE_RANGE = "0000fff4-0000-1000-8000-00805f9b34fb";
 
     public enum ControlMode {
         MANUAL, AUTO, UNKNOWN;
@@ -100,6 +110,16 @@ public class Device {
     private float temperature;
     private float temperatureRangeMin;
     private float temperatureRangeMax;
+
+    public boolean isConnected() {
+        return isConnected;
+    }
+
+    public void setIsConnected(boolean isConnected) {
+        this.isConnected = isConnected;
+    }
+
+    private boolean isConnected = false;
 
     public Device(String address, String passkey) {
         this.address = address;

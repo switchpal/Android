@@ -1,4 +1,4 @@
-package com.getswitchpal.android;
+package com.getswitchpal.android.widgets;
 
 import android.content.Context;
 import android.util.AttributeSet;
