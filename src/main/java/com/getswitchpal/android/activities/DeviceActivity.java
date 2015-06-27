@@ -42,6 +42,8 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothGatt mBluetoothGatt;
     private DeviceOperationQueue mDeviceOperationQueue;
+    // we need to distinguish whether a temperature update request is sent automatically or required by the user
+    private boolean isManuallyRequestingTemperature;
 
     // the device
     private Device mDevice;
@@ -119,6 +121,18 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
             @Override
             public void onClick(View v) {
                 toggleControlMode();
+            }
+        });
+
+        // request to update temperature when clicking on the number
+        mTemperatureIntegerView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mDeviceOperationQueue != null) {
+                    isManuallyRequestingTemperature = true;
+                    showProgress("Requesting Current Temperature");
+                    mDeviceOperationQueue.add(new DeviceReadOperation(Device.UUID_CHARACTERISTIC_TEMPERATURE));
+                }
             }
         });
 
@@ -326,6 +340,10 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
         updateView();
 
         if (type == DeviceOperation.Type.WRITE) {
+            hideProgress();
+        }
+        if (type == DeviceOperation.Type.READ && uuid.equals(Device.UUID_CHARACTERISTIC_TEMPERATURE) && isManuallyRequestingTemperature) {
+            isManuallyRequestingTemperature = false;
             hideProgress();
         }
     }
