@@ -230,6 +230,7 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
                     mDevice.setIsConnected(false);
 
                     showProgress("Reconnecting to device");
+
                     connectDevice(mBluetoothDevice);
                     break;
             }
@@ -449,22 +450,29 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
      * - we found the device by scanning
      * - we lost the connection and want to reconnect
      */
-    private void connectDevice(BluetoothDevice device) {
+    private void connectDevice(final BluetoothDevice device) {
         Log.d(TAG, "Connecting to the device");
         if (device == null) {
             Log.w(TAG, "Device not found. Unable to connect.");
             return;
         }
 
-        mBluetoothDevice = device;
-        // We want to directly connect to the device, so we are setting the autoConnect parameter to false.
-        mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
-        if (mBluetoothGatt == null) {
-            Toast.makeText(this, "device.connectGatt returns null", Toast.LENGTH_LONG).show();
-            return;
-        }
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
 
-        showProgress("Connecting to your SwitchPal device");
+                mBluetoothDevice = device;
+                // We want to directly connect to the device, so we are setting the autoConnect parameter to false.
+                mBluetoothGatt = device.connectGatt(DeviceActivity.this, false, mGattCallback);
+                if (mBluetoothGatt == null) {
+                    Toast.makeText(DeviceActivity.this, "device.connectGatt returns null", Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                showProgress("Connecting to your SwitchPal device");
+            }
+        });
+
     }
 
 
