@@ -17,7 +17,7 @@ import android.view.View;
 import android.widget.*;
 import com.getswitchpal.android.*;
 import com.getswitchpal.android.dialogs.BluetoothScanFailedDialog;
-import com.getswitchpal.android.utils.Device;
+import com.getswitchpal.android.utils.*;
 import com.getswitchpal.android.widgets.ToggleButton;
 import com.parse.ParseAnalytics;
 
@@ -25,7 +25,6 @@ import java.util.*;
 
 /**
  * The activity that is used when a user has not connect to a device.
- *
  *
  */
 public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClickListener {
@@ -36,16 +35,13 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
     public static final String EXTRAS_DEVICE_ADDRESS = "address";
     public static final String EXTRAS_DEVICE_PASSKEY = "passkey";
 
-
-    private TextView mConnectionState;
-    private boolean mConnected = false;
-
     // whether we have got a complete Device information like control mode and switch state,
     // The temperature will be updated periodically, but control mode and switch state will be notified by the device
     private boolean mHasInitialized = false;
 
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothGatt mBluetoothGatt;
+    private DeviceOperationQueue mDeviceOperationQueue;
 
     // the device
     private Device mDevice;
@@ -64,7 +60,6 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
     private ImageView moreView;
 
     private RelativeLayout mProgressOverlay;
-    private ProgressBar mProgressBar;
     private TextView mProgressTextView;
 
     // double back to exit
@@ -73,9 +68,6 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
     // we need to update Device info periodically, every 15 seconds
     private int mInterval = 15000;
     private Handler mHandler;
-
-    // when requesting Device info periodically, we need to request characteristics one by one
-    private Stack<String> queuedReadCharacteristicUuids = new Stack<>();
 
 
     @Override
@@ -152,8 +144,6 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
             }
         });
 
-        mConnectionState = (TextView) findViewById(R.id.connection_state);
-
         // For API level 18 and above, get a reference to BluetoothAdapter through
         // BluetoothManager.
         BluetoothManager mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
@@ -186,21 +176,14 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
             if (!mHasInitialized) {
                 mHasInitialized = true;
                 // queue all the readable info
-                queuedReadCharacteristicUuids.push(Device.UUID_CHARACTERISTIC_CONTROL_MODE);
-                queuedReadCharacteristicUuids.push(Device.UUID_CHARACTERISTIC_SWITCH_STATE);
-                queuedReadCharacteristicUuids.push(Device.UUID_CHARACTERISTIC_TEMPERATURE_RANGE);
-
-                //queuedReadCharacteristicUuids.push(SwitchPal.UUID_CHARACTERISTIC_TEMPERATURE);
-                requestTemperature();
-
-                mHandler.postDelayed(mDeviceInfoUpdater, mInterval);
-            } else if (isManualOperationInProgress()) {
-                // if user operation is in progress, back off and try again later.
-                mHandler.postDelayed(mDeviceInfoUpdater, 1000);
+                mDeviceOperationQueue.add(new DeviceReadOperation(Device.UUID_CHARACTERISTIC_TEMPERATURE));
+                mDeviceOperationQueue.add(new DeviceReadOperation(Device.UUID_CHARACTERISTIC_CONTROL_MODE));
+                mDeviceOperationQueue.add(new DeviceReadOperation(Device.UUID_CHARACTERISTIC_SWITCH_STATE));
+                mDeviceOperationQueue.add(new DeviceReadOperation(Device.UUID_CHARACTERISTIC_TEMPERATURE_RANGE));
             } else {
-                requestTemperature();
-                mHandler.postDelayed(mDeviceInfoUpdater, mInterval);
+                mDeviceOperationQueue.add(new DeviceReadOperation(Device.UUID_CHARACTERISTIC_TEMPERATURE));
             }
+            mHandler.postDelayed(mDeviceInfoUpdater, mInterval);
         }
     };
 
@@ -219,16 +202,6 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, final int newState) {
-            String intentAction;
-
-            // For debugging purpose
-            //runOnUiThread(new Runnable() {
-            //    @Override
-            //    public void run() {
-            //        Toast.makeText(DeviceActivity.this, "BluetoothGattCallback state change to:" + newState, Toast.LENGTH_LONG).show();
-            //    }
-            //});
-
             switch (newState) {
                 case BluetoothProfile.STATE_CONNECTED:
                     hideProgress();
@@ -256,114 +229,105 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
                 public void run() {
                     hideProgress();
                     mDevice.setIsConnected(true);
+                    mDeviceOperationQueue = new DeviceOperationQueue(mBluetoothGatt);
+                    // enable notifications
+                    mDeviceOperationQueue.add(new DeviceEnableNotificationOperation(Device.UUID_CHARACTERISTIC_SWITCH_STATE));
+                    mDeviceOperationQueue.add(new DeviceEnableNotificationOperation(Device.UUID_CHARACTERISTIC_CONTROL_MODE));
 
-                    // enable notification, we need to wait the first characteristic to finish and then request to
-                    // enable the second characteristic
-                    enableNotification(Device.UUID_CHARACTERISTIC_SWITCH_STATE);
-                    mHandler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            enableNotification(Device.UUID_CHARACTERISTIC_CONTROL_MODE);
-                        }
-                    }, 5000);
                     startRepeatingTask();
                 }
             });
         }
 
         @Override
-        public void onCharacteristicRead(BluetoothGatt gatt,
-                                         BluetoothGattCharacteristic characteristic,
-                                         int status) {
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                byte[] data = characteristic.getValue();
-                String uuid = characteristic.getUuid().toString();
-                switch (uuid) {
-                    case Device.UUID_CHARACTERISTIC_SWITCH_STATE:
-                        mDevice.setSwitchState(data);
-                        Log.i(TAG, "Switch State is:" + mDevice.getSwitchState());
-                        break;
-                    case Device.UUID_CHARACTERISTIC_CONTROL_MODE:
-                        mDevice.setControlMode(data);
-                        Log.i(TAG, "Control Mode is:" + mDevice.getControlMode());
-                        break;
-                    case Device.UUID_CHARACTERISTIC_TEMPERATURE:
-                        mDevice.setTemperature(data);
-                        Log.i(TAG, "Temperature is: " + mDevice.getTemperature());
-                        break;
-                    case Device.UUID_CHARACTERISTIC_TEMPERATURE_RANGE:
-                        mDevice.setTemperatureRange(data);
-                        Log.i(TAG, "Temperature Range: min=" + mDevice.getTemperatureRangeMin() + ", max=" + mDevice.getTemperatureRangeMax());
-                        break;
-                    default:
-                        Log.i(TAG, "unknown UUID: " + uuid);
+        public void onCharacteristicRead(BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic, final int status) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    onGattCharacteristicCallback(characteristic, DeviceOperation.Type.READ, status);
                 }
-                updateView();
-                if (queuedReadCharacteristicUuids.size() != 0) {
-                    requestReadCharacteristic(queuedReadCharacteristicUuids.pop());
-                }
-            }
+            });
         }
 
         @Override
-        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                byte[] data = characteristic.getValue();
-                String uuid = characteristic.getUuid().toString();
+        public void onCharacteristicWrite(BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic, final int status) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
 
-                Log.i(TAG, "data written intent:" + uuid);
-                switch (uuid) {
-                    case Device.UUID_CHARACTERISTIC_SWITCH_STATE:
-                        mDevice.setSwitchState(data);
-                        Log.i(TAG, "Switch State is:" + mDevice.getSwitchState());
-                        break;
-                    case Device.UUID_CHARACTERISTIC_CONTROL_MODE:
-                        mDevice.setControlMode(data);
-                        Log.i(TAG, "Control Mode is:" + mDevice.getControlMode());
-                        break;
-                    case Device.UUID_CHARACTERISTIC_TEMPERATURE_RANGE:
-                        mDevice.setTemperatureRange(data);
-                        Log.i(TAG, "Temperature Range: min=" + mDevice.getTemperatureRangeMin() + ", max=" + mDevice.getTemperatureRangeMax());
-                        break;
-                    default:
-                        Log.i(TAG, "unknown UUID: " + uuid);
+                    onGattCharacteristicCallback(characteristic, DeviceOperation.Type.WRITE, status);
                 }
-                updateView();
-            }
+            });
         }
 
         /**
          * Respond to notifications from the device
          */
         @Override
-        public void onCharacteristicChanged(BluetoothGatt gatt,
-                                            BluetoothGattCharacteristic characteristic) {
-            byte[] data = characteristic.getValue();
-            String uuid = characteristic.getUuid().toString();
+        public void onCharacteristicChanged(BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    onGattCharacteristicCallback(characteristic, DeviceOperation.Type.NOTIFY, BluetoothGatt.GATT_SUCCESS);
+                }
+            });
+        }
 
-            Log.i(TAG, "receive notification from device, uuid:" + uuid);
-            switch (uuid) {
-                case Device.UUID_CHARACTERISTIC_SWITCH_STATE:
-                    mDevice.setSwitchState(data);
-                    Log.i(TAG, "Switch State is:" + mDevice.getSwitchState());
-                    break;
-                case Device.UUID_CHARACTERISTIC_CONTROL_MODE:
-                    mDevice.setControlMode(data);
-                    Log.i(TAG, "Control Mode is:" + mDevice.getControlMode());
-                    break;
-                default:
-                    Log.i(TAG, "unknown UUID: " + uuid);
-            }
-            updateView();
+        /**
+         * Respond to DeviceEnableNotificationOperation
+         */
+        @Override
+        public void onDescriptorWrite(BluetoothGatt gatt, final BluetoothGattDescriptor descriptor, final int status) {
+            Log.d(TAG, "onDescriptorWrite: " + descriptor.getCharacteristic().getUuid().toString());
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mDeviceOperationQueue.checkDescriptorResponse(descriptor, status);
+                }
+            });
         }
     };
 
-    private void enableNotification(String uuid) {
-        BluetoothGattCharacteristic characteristic = getCharacteristic(uuid);
-        mBluetoothGatt.setCharacteristicNotification(characteristic, true);
-        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"));
-        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-        mBluetoothGatt.writeDescriptor(descriptor);
+    /**
+     * Called when onCharacteristicRead, onCharacteristicWrite, onCharacteristicChange
+     */
+    private void onGattCharacteristicCallback(BluetoothGattCharacteristic characteristic,
+                                              DeviceOperation.Type type,
+                                              int status) {
+        mDeviceOperationQueue.checkCharacteristicResponse(characteristic, type, status);
+
+        if (status != BluetoothGatt.GATT_SUCCESS){
+            Log.e(TAG, "onCharacteristicRead error status: " + status);
+            return;
+        }
+
+        byte[] data = characteristic.getValue();
+        String uuid = characteristic.getUuid().toString();
+        switch (uuid) {
+            case Device.UUID_CHARACTERISTIC_SWITCH_STATE:
+                mDevice.setSwitchState(data);
+                Log.i(TAG, "Switch State is:" + mDevice.getSwitchState());
+                break;
+            case Device.UUID_CHARACTERISTIC_CONTROL_MODE:
+                mDevice.setControlMode(data);
+                Log.i(TAG, "Control Mode is:" + mDevice.getControlMode());
+                break;
+            case Device.UUID_CHARACTERISTIC_TEMPERATURE:
+                mDevice.setTemperature(data);
+                Log.i(TAG, "Temperature is: " + mDevice.getTemperature());
+                break;
+            case Device.UUID_CHARACTERISTIC_TEMPERATURE_RANGE:
+                mDevice.setTemperatureRange(data);
+                Log.i(TAG, "Temperature Range: min=" + mDevice.getTemperatureRangeMin() + ", max=" + mDevice.getTemperatureRangeMax());
+                break;
+            default:
+                Log.i(TAG, "unknown UUID: " + uuid);
+        }
+        updateView();
+
+        if (type == DeviceOperation.Type.WRITE) {
+            hideProgress();
+        }
     }
 
     @Override
@@ -444,6 +408,8 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
+                            Log.d(TAG, "got device" + device.getAddress());
+                            Log.d(TAG, "target deivce:" + mDevice.getAddress());
                             if (device.getAddress().equals(mDevice.getAddress())) {
                                 mScanning = false;
                                 mBluetoothAdapter.stopLeScan(mLeScanCallback);
@@ -462,6 +428,7 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
      * We may comes here by two ways:
      * - we found the device has been paired before, so no scanning is involved
      * - we found the device by scanning
+     * - we lost the connection and want to reconnect
      */
     private void connectDevice(BluetoothDevice device) {
         Log.d(TAG, "Connecting to the device");
@@ -477,6 +444,7 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
             Toast.makeText(this, "device.connectGatt returns null", Toast.LENGTH_LONG).show();
             return;
         }
+
         showProgress("Connecting to your SwitchPal device");
     }
 
@@ -537,9 +505,6 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
                         mControlModeView.setText("Manual");
                     }
                 }
-
-                // since the view is updated, remove ProgressBar
-                hideProgress();
             }
         });
     }
@@ -642,10 +607,6 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
         dialog.show();
     }
 
-    private boolean isManualOperationInProgress() {
-        return mProgressOverlay.getVisibility() == View.VISIBLE;
-    }
-
     ShowProgressTaskForLongOperations showProgressTaskForLongOperationsTask = null;
 
     /**
@@ -722,54 +683,6 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
         return service.getCharacteristic(UUID.fromString(uuid));
     }
 
-    private void requestReadCharacteristic(String uuid) {
-        //showProgress("Communicating with your SwitchPal Device");
-        if (!mDevice.isConnected()) {
-            Toast.makeText(this, "Device is disconnected, unable to command", Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        if (mBluetoothGatt == null) {
-            Log.e(TAG, "mBluetoothGatt is nul");
-            return;
-        }
-
-        mBluetoothGatt.readCharacteristic(getCharacteristic(uuid));
-    }
-
-    private void requestWriteCharacteristic(String uuid, byte[] data) {
-        if (!mDevice.isConnected()) {
-            Toast.makeText(this, "Device is disconnected, unable to command", Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        showProgress("Commanding your SwitchPal Device");
-
-        if (mBluetoothGatt == null) {
-            Log.e(TAG, "mBluetoothGatt is nul");
-            return;
-        }
-
-        BluetoothGattCharacteristic characteristic = getCharacteristic(uuid);
-        characteristic.setValue(data);
-        mBluetoothGatt.writeCharacteristic(characteristic);
-    }
-
-    /**
-     * Read current temperature from the device
-     */
-    private void requestTemperature() {
-        // temperature characteristic
-        requestReadCharacteristic(Device.UUID_CHARACTERISTIC_TEMPERATURE);
-    }
-
-    /**
-     * Read current temperature from the device
-     */
-    private void requestTemperatureRange() {
-        requestReadCharacteristic(Device.UUID_CHARACTERISTIC_TEMPERATURE_RANGE);
-    }
-
     /**
      * When to turn on/off the switch
      */
@@ -797,14 +710,8 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
         data[2] = (byte) ((int) max);
         data[3] = (byte) ((max - (int) max) * 100);
 
-        requestWriteCharacteristic(Device.UUID_CHARACTERISTIC_TEMPERATURE_RANGE, data);
-    }
-
-    /**
-     * Get current control mode from the device
-     */
-    private void requestControlMode() {
-        requestReadCharacteristic(Device.UUID_CHARACTERISTIC_CONTROL_MODE);
+        showProgress("Setting Temperature Range");
+        mDeviceOperationQueue.add(new DeviceWriteOperation(Device.UUID_CHARACTERISTIC_TEMPERATURE_RANGE, data));
     }
 
     private void setControlMode(Device.ControlMode mode) {
@@ -822,18 +729,13 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
 
         byte[] data = new byte[1];
         data[0] = mode.toByte();
-        requestWriteCharacteristic(Device.UUID_CHARACTERISTIC_CONTROL_MODE, data);
+
+        showProgress("Setting Control Mode");
+        mDeviceOperationQueue.add(new DeviceWriteOperation(Device.UUID_CHARACTERISTIC_CONTROL_MODE, data));
     }
 
     private void toggleControlMode() {
         setControlMode(mDevice.getControlMode().getToggle());
-    }
-
-    /**
-     * Get current switch state from the device
-     */
-    private void requestSwitchState() {
-        requestReadCharacteristic(Device.UUID_CHARACTERISTIC_SWITCH_STATE);
     }
 
     private void setSwitchState(Device.SwitchState state) {
@@ -851,7 +753,9 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
 
         byte[] data = new byte[1];
         data[0] = state.toByte();
-        requestWriteCharacteristic(Device.UUID_CHARACTERISTIC_SWITCH_STATE, data);
+
+        showProgress("Setting Switch State");
+        mDeviceOperationQueue.add(new DeviceWriteOperation(Device.UUID_CHARACTERISTIC_SWITCH_STATE, data));
     }
 
     private void toggleSwitchState() {

@@ -54,7 +54,6 @@ public class QRScanActivity extends Activity implements ZXingScannerView.ResultH
 
     /**
      * Handle the QR code content
-     * @param rawResult
      */
     @Override
     public void handleResult(Result rawResult) {

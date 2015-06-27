@@ -55,17 +55,6 @@ public class MainActivity extends Activity {
             }
         });
 
-        // TODO: remove this after debugging
-        final Button debugButton = (Button) findViewById(R.id.text_debug);
-        debugButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, DeviceActivity.class);
-                intent.setFlags(intent.getFlags() | Intent.FLAG_ACTIVITY_NO_HISTORY);
-                MainActivity.this.startActivity(intent);
-            }
-        });
-
         // track app open
         ParseAnalytics.trackAppOpenedInBackground(getIntent());
     }

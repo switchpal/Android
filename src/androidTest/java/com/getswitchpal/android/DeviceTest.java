@@ -5,7 +5,7 @@ import junit.framework.TestCase;
 
 /**
  */
-public class UtilsTest extends TestCase {
+public class DeviceTest extends TestCase {
 
     public void testGetDeviceInfoFromUrl() {
         Device device = Device.getDeviceInfoFromQRCode("http://getswitchpal.com/app/?device=ZNJW59nKFChX");
