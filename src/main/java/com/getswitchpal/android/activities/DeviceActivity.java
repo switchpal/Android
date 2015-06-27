@@ -268,7 +268,6 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-
                     onGattCharacteristicCallback(characteristic, DeviceOperation.Type.WRITE, status);
                 }
             });
@@ -321,18 +320,22 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
             case Device.UUID_CHARACTERISTIC_SWITCH_STATE:
                 mDevice.setSwitchState(data);
                 Log.i(TAG, "Switch State is:" + mDevice.getSwitchState());
+                Analytics.trackSwitchState(mDevice.getSwitchState());
                 break;
             case Device.UUID_CHARACTERISTIC_CONTROL_MODE:
                 mDevice.setControlMode(data);
                 Log.i(TAG, "Control Mode is:" + mDevice.getControlMode());
+                Analytics.trackControlMode(mDevice.getControlMode());
                 break;
             case Device.UUID_CHARACTERISTIC_TEMPERATURE:
                 mDevice.setTemperature(data);
                 Log.i(TAG, "Temperature is: " + mDevice.getTemperature());
+                Analytics.trackTemperature(mDevice.getTemperature());
                 break;
             case Device.UUID_CHARACTERISTIC_TEMPERATURE_RANGE:
                 mDevice.setTemperatureRange(data);
                 Log.i(TAG, "Temperature Range: min=" + mDevice.getTemperatureRangeMin() + ", max=" + mDevice.getTemperatureRangeMax());
+                Analytics.trackTemperatureRange(mDevice.getTemperatureRangeMin(), mDevice.getTemperatureRangeMax());
                 break;
             default:
                 Log.i(TAG, "unknown UUID: " + uuid);
@@ -438,8 +441,6 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
                         }
                     });
                 }
-
-
             };
 
     /**
@@ -705,6 +706,7 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
      * When to turn on/off the switch
      */
     private void setTemperatureRange(float min, float max) {
+        Analytics.trackSetTemperatureRange(min, max);
 
         if (min < 20 || min > 32 || max < 20 || max > 32) {
             new AlertDialog.Builder(this)
@@ -733,23 +735,13 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
     }
 
     private void setControlMode(Device.ControlMode mode) {
-        Map<String, String> dimensions = new HashMap<>();
-        String modeString;
-        if (mode == Device.ControlMode.AUTO) {
-            modeString = "auto";
-        } else if (mode == Device.ControlMode.MANUAL) {
-            modeString = "manual";
-        } else {
-            modeString = "unknown";
-        }
-        dimensions.put("mode", modeString);
-        ParseAnalytics.trackEventInBackground("setControlMode", dimensions);
+        Analytics.trackSetControlMode(mode);
 
         byte[] data = new byte[1];
         data[0] = mode.toByte();
+        mDeviceOperationQueue.add(new DeviceWriteOperation(Device.UUID_CHARACTERISTIC_CONTROL_MODE, data));
 
         showProgress("Setting Control Mode");
-        mDeviceOperationQueue.add(new DeviceWriteOperation(Device.UUID_CHARACTERISTIC_CONTROL_MODE, data));
     }
 
     private void toggleControlMode() {
@@ -757,23 +749,13 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
     }
 
     private void setSwitchState(Device.SwitchState state) {
-        Map<String, String> dimensions = new HashMap<>();
-        String stateString;
-        if (state == Device.SwitchState.ON) {
-            stateString = "on";
-        } else if (state == Device.SwitchState.OFF) {
-            stateString = "off";
-        } else {
-            stateString = "unknown";
-        }
-        dimensions.put("state", stateString);
-        ParseAnalytics.trackEventInBackground("setSwitchState", dimensions);
+        Analytics.trackSetSwitchState(state);
 
         byte[] data = new byte[1];
         data[0] = state.toByte();
+        mDeviceOperationQueue.add(new DeviceWriteOperation(Device.UUID_CHARACTERISTIC_SWITCH_STATE, data));
 
         showProgress("Setting Switch State");
-        mDeviceOperationQueue.add(new DeviceWriteOperation(Device.UUID_CHARACTERISTIC_SWITCH_STATE, data));
     }
 
     private void toggleSwitchState() {
@@ -812,11 +794,13 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
     public boolean onMenuItemClick(MenuItem menuItem) {
         switch (menuItem.getItemId()) {
             case R.id.menu_feedback:
+                Analytics.trackClick("Feedback");
                 Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("http://getswitchpal.com/"));
                 startActivity(i);
                 return true;
 
             case R.id.menu_new_device:
+                Analytics.trackClick("NewDevice");
                 Intent intent = new Intent(this, QRScanActivity.class);
                 startActivity(intent);
                 return true;
@@ -832,6 +816,7 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_MENU) {
+            Analytics.trackClick("More");
             moreView.performClick();
             return true;
         }
