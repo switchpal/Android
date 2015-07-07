@@ -419,7 +419,7 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
     }
 
     private static boolean mScanning = false;
-    private static final long SCAN_PERIOD = 10000;
+    private static final long SCAN_PERIOD = 5000;
 
     // Device scan callback.
     private BluetoothAdapter.LeScanCallback mLeScanCallback =
@@ -543,7 +543,7 @@ public class DeviceActivity extends Activity implements PopupMenu.OnMenuItemClic
 
         // the values that can be selected by user, between 24 to 30
         final ArrayList<String> values = new ArrayList<>();
-        for (float temp = 24; temp < 30.1; temp += 0.1) {
+        for (float temp = 24; temp < 32.1; temp += 0.1) {
             values.add(String.format("%2.1f", temp));
         }
 
